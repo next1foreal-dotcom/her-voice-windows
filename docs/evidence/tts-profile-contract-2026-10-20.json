@@ -1,0 +1,72 @@
+{
+  "project_version": "0.4.0",
+  "checked_at": "2026-10-20",
+  "upstream_commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+  "scope": "Configuration metadata only; original pinned load_config, validate_config and resolve_config functions.",
+  "source_subset": "Original fixed registry, config parser and argument dataclasses, without the inference-heavy package initializer. This is not a full installed Windows runtime test.",
+  "environment": {
+    "system": "Linux",
+    "python": "3.12.14"
+  },
+  "inputs": {
+    "template": "config/windows-4080.yaml",
+    "template_sha256": "3cb4f1631bebba5348c3764051e4b1fef89b622fd8428abbecd03d18f4502cf2",
+    "profile_builder": "her_voice.tts.profile_for_backend",
+    "generated_extension": ".yaml",
+    "model_paths": "Nonexistent validation-only paths; no model file opened."
+  },
+  "results": [
+    {
+      "selected_backend": "drama3",
+      "status": "passed",
+      "load_config": "passed",
+      "validate_config": "passed",
+      "resolve_config": "passed",
+      "resolved_tts_backend": "openai",
+      "observed_settings": {
+        "openai_tts_base_url": "http://127.0.0.1:8792/v1",
+        "openai_tts_model": "drama-3",
+        "openai_tts_voice": "voice_fixture",
+        "openai_tts_language": null,
+        "openai_tts_sample_rate": 44100,
+        "openai_tts_response_format": "pcm",
+        "openai_tts_stream": false
+      },
+      "pipeline": "windows4080",
+      "loopback_port": 8791,
+      "json_suffix_rejected_as_expected": true
+    },
+    {
+      "selected_backend": "qwen3",
+      "status": "passed",
+      "load_config": "passed",
+      "validate_config": "passed",
+      "resolve_config": "passed",
+      "resolved_tts_backend": "qwen3",
+      "observed_settings": {
+        "qwen3_tts_model_name": "/validation-only/models--Qwen--Qwen3-TTS-12Hz-0.6B-Base/snapshots/5d83992436eae1d760afd27aff78a71d676296fc",
+        "qwen3_tts_ref_audio": "/validation-only/reference.wav",
+        "qwen3_tts_ref_text": "你好，这是测试。 Hello, this is a test.",
+        "qwen3_tts_speaker": null,
+        "qwen3_tts_language": "auto",
+        "qwen3_tts_backend": "torch",
+        "qwen3_tts_dtype": "float16",
+        "qwen3_tts_attn_implementation": "eager",
+        "qwen3_tts_non_streaming_mode": true,
+        "qwen3_tts_streaming_chunk_size": 8
+      },
+      "pipeline": "windows4080",
+      "loopback_port": 8791,
+      "json_suffix_rejected_as_expected": true
+    }
+  ],
+  "not_performed": [
+    "Windows installation",
+    "CUDA build",
+    "model download",
+    "real inference",
+    "real microphone or speaker test",
+    "cloud API request"
+  ],
+  "passed": true
+}

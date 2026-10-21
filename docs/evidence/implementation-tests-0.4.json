@@ -1,0 +1,98 @@
+{
+  "version": "0.4.0",
+  "date_utc": "2026-10-20",
+  "result": "PASS",
+  "environment": {
+    "system": "Linux",
+    "machine": "x86_64",
+    "python": "3.12.14",
+    "node": "v24.19.0",
+    "packages": {
+      "aiohttp": "3.14.4",
+      "PyYAML": "6.0.3",
+      "numpy": "2.3.5",
+      "scipy": "1.17.0"
+    }
+  },
+  "python": {
+    "tests": 162,
+    "passed": 162,
+    "failed": 0,
+    "skipped": 0,
+    "duration_seconds": 8.616,
+    "files": {
+      "test_app": 10,
+      "test_deepseek_probe": 11,
+      "test_doctor": 7,
+      "test_drama_runtime": 9,
+      "test_drama_setup": 12,
+      "test_drama_stream": 9,
+      "test_engine": 17,
+      "test_gateway": 21,
+      "test_models": 11,
+      "test_pin_silero": 10,
+      "test_providers": 7,
+      "test_reuse": 7,
+      "test_settings": 16,
+      "test_tts_selection": 6,
+      "test_voices": 9
+    },
+    "command": "PYTHONPATH=<test-dependencies>:<project> VOICE_UPSTREAM_HTTP_SOURCE=<fixed-handler.py> python -m unittest discover -s tests -p 'test_*.py' -v"
+  },
+  "javascript": {
+    "tests": 43,
+    "passed": 43,
+    "failed": 0,
+    "skipped": 0,
+    "files": {
+      "audio": {
+        "tests": 10,
+        "pass": 10,
+        "fail": 0,
+        "skipped": 0
+      },
+      "client": {
+        "tests": 12,
+        "pass": 12,
+        "fail": 0,
+        "skipped": 0
+      },
+      "protocol": {
+        "tests": 12,
+        "pass": 12,
+        "fail": 0,
+        "skipped": 0
+      },
+      "voice-settings": {
+        "tests": 9,
+        "pass": 9,
+        "fail": 0,
+        "skipped": 0
+      }
+    },
+    "commands": [
+      "node tests/audio.test.mjs",
+      "node tests/client.test.mjs",
+      "node tests/protocol.test.mjs",
+      "node tests/voice-settings.test.mjs"
+    ],
+    "aggregate_runner": "node --test tests/*.test.mjs passed; this runtime reports file entries. The listed individual commands passed all 43 cases."
+  },
+  "scope": [
+    "Local HTTP and WebSocket integration",
+    "Owned fixture subprocess lifecycle",
+    "Actual pinned upstream HTTP handler methods with heavy inference imports excluded",
+    "Streaming SoXR DSP and cancellation",
+    "Voice upload, normalization, selection and persistence",
+    "Startup failure cleanup versus rapid restart race"
+  ],
+  "not_tested": [
+    "Native Windows installer execution",
+    "Full Windows pip resolver",
+    "CUDA/audio.cpp inference",
+    "Whisper/Qwen/Drama model quality",
+    "Real DeepSeek API credentials and latency",
+    "Physical microphone/speaker and acoustic echo",
+    "4080 SUPER peak VRAM and 64GB RAM usage"
+  ]
+}

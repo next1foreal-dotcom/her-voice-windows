@@ -1,0 +1,3 @@
+include README.md LICENSE
+recursive-include web *.html *.css *.js
+recursive-include config *.yaml *.json *.txt

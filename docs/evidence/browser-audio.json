@@ -1,0 +1,204 @@
+{
+  "result": "PASS",
+  "browser": "155.0.8059.84",
+  "scope": "Synthetic Chromium microphone and fake Realtime engine; no ASR, TTS, GPU, real microphone, or paid API.",
+  "checks": [
+    "Native getUserMedia + AudioWorklet sends nonzero PCM16: every frame is 1,920 bytes = 40 ms at 24 kHz mono",
+    "Captured synthetic PCM traverses the real WebSocket bridge and starts a native 24 kHz WebAudio source",
+    "Server speech_started stops the live source and sends exactly one scoped cancel; delayed old PCM/text never creates another source",
+    "A new response plays after interruption; immediate response.done waits for the 800 ms native playback to drain",
+    "Stopping releases the real capture track and both WebSocket ends; zero external or provider requests"
+  ],
+  "audioMetrics": {
+    "gum": [
+      {
+        "constraints": {
+          "audio": {
+            "channelCount": 1,
+            "echoCancellation": true,
+            "noiseSuppression": true,
+            "autoGainControl": true
+          }
+        },
+        "settings": [
+          {
+            "autoGainControl": true,
+            "channelCount": 1,
+            "deviceId": "default",
+            "echoCancellation": true,
+            "groupId": "72e05068f1bde241d0e793e6dd7a5626a99a557edde89105e647dc7ccd115710",
+            "latency": 0.01,
+            "noiseSuppression": true,
+            "sampleRate": 48000,
+            "sampleSize": 16,
+            "voiceIsolation": false
+          }
+        ]
+      }
+    ],
+    "modules": [
+      "http://127.0.0.1:44285/capture-worklet.js"
+    ],
+    "started": [
+      {
+        "length": 120000,
+        "sampleRate": 24000,
+        "duration": 5,
+        "channels": 1,
+        "peak": 0.080108642578125
+      },
+      {
+        "length": 19200,
+        "sampleRate": 24000,
+        "duration": 0.8,
+        "channels": 1,
+        "peak": 0.000701904296875
+      }
+    ],
+    "stops": [
+      {
+        "at": 1782.2999999998137
+      }
+    ],
+    "ended": 2,
+    "active": 0,
+    "trackStates": [
+      "ended"
+    ]
+  },
+  "afterDone": {
+    "state": "speaking",
+    "active": 1
+  },
+  "receivedEvents": [
+    {
+      "type": "session.created"
+    },
+    {
+      "type": "session.updated"
+    },
+    {
+      "type": "input_audio_buffer.speech_started"
+    },
+    {
+      "type": "input_audio_buffer.speech_stopped"
+    },
+    {
+      "type": "conversation.item.input_audio_transcription.completed"
+    },
+    {
+      "type": "response.created",
+      "id": "browser-fixture-old"
+    },
+    {
+      "type": "response.output_audio_transcript.delta",
+      "id": "browser-fixture-old"
+    },
+    {
+      "type": "response.output_audio.delta",
+      "id": "browser-fixture-old"
+    },
+    {
+      "type": "input_audio_buffer.speech_started"
+    },
+    {
+      "type": "response.done",
+      "id": "browser-fixture-old"
+    },
+    {
+      "type": "response.output_audio_transcript.delta",
+      "id": "browser-fixture-old"
+    },
+    {
+      "type": "response.output_audio.delta",
+      "id": "browser-fixture-old"
+    },
+    {
+      "type": "response.done",
+      "id": "browser-fixture-old"
+    },
+    {
+      "type": "input_audio_buffer.speech_started"
+    },
+    {
+      "type": "input_audio_buffer.speech_stopped"
+    },
+    {
+      "type": "conversation.item.input_audio_transcription.completed"
+    },
+    {
+      "type": "response.created",
+      "id": "browser-fixture-new"
+    },
+    {
+      "type": "response.output_audio_transcript.delta",
+      "id": "browser-fixture-new"
+    },
+    {
+      "type": "response.output_audio.delta",
+      "id": "browser-fixture-new"
+    },
+    {
+      "type": "response.done",
+      "id": "browser-fixture-new"
+    }
+  ],
+  "fixture": {
+    "scope": "Synthetic Chromium microphone and fake Realtime engine; no ASR, TTS, GPU, real microphone, or paid API.",
+    "frames": 55,
+    "frame_lengths": {
+      "1920": 55
+    },
+    "invalid_frames": 0,
+    "nonzero_frames": 35,
+    "peak_pcm16": 31495,
+    "cancels": [
+      "browser-fixture-old"
+    ],
+    "session_updates": [
+      {
+        "type": "realtime",
+        "output_modalities": [
+          "audio"
+        ],
+        "audio": {
+          "input": {
+            "format": {
+              "type": "audio/pcm",
+              "rate": 24000
+            },
+            "transcription": {
+              "language": null
+            },
+            "turn_detection": {
+              "type": "server_vad",
+              "create_response": true,
+              "interrupt_response": true
+            }
+          },
+          "output": {
+            "format": {
+              "type": "audio/pcm",
+              "rate": 24000
+            },
+            "voice": "Vivian"
+          }
+        },
+        "extensions": [
+          "speech_to_speech.input_audio_transcription.snapshot"
+        ]
+      }
+    ],
+    "sessions_opened": 1,
+    "sessions_closed": 1,
+    "active_sockets": 0,
+    "provider_requests": 0,
+    "responses_sent": 2,
+    "late_audio_sent": 1,
+    "speech_started_sent": 3,
+    "engine_starts": 0,
+    "engine_stops": 0
+  },
+  "errors": [],
+  "externalRequests": []
+}

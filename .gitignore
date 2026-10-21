@@ -1,0 +1,25 @@
+.env
+.venv*/
+.runtime/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+node_modules/
+build/
+dist/
+logs/
+models/
+runtime-environment.txt
+doctor-report.json
+.DS_Store
+.venv-speech/
+.venv-demo/
+voices/
+*.pyc
+
+# Local session notes and additional secrets
+work/
+.env.*
+!.env.example
+!examples/*.env.example

@@ -1,0 +1,10 @@
+{
+  "result": "PASS",
+  "version": "0.4.0",
+  "scope": "Installed wheel resources, fresh cwd, local demo HTTP routes; no speech models/GPU/API",
+  "routes": 5,
+  "assets": "packaged _assets",
+  "python": "3.12.14",
+  "wheel": "her_windows_voice-0.4.0-py3-none-any.whl",
+  "dependencies": "not resolved; --no-deps uses existing aiohttp"
+}

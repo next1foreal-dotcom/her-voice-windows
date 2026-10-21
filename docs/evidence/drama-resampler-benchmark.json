@@ -1,0 +1,35 @@
+{
+  "scope": "Linux host CPU microbenchmark of one 50 ms audio block, not Windows/GPU inference latency",
+  "python": "3.12.14",
+  "machine": "x86_64",
+  "source_sha256": "8723e77e9ba7ebe6e0ae9a3b746cdf87b1faefeeb0c7114aed24986c98c3d3a8",
+  "source_rate": 44100,
+  "target_rate": 16000,
+  "trials": 5,
+  "measurements": {
+    "upstream_direct_FIR": {
+      "seconds": [
+        0.5792603949994373,
+        0.59875377499975,
+        0.5781762719998369,
+        0.5964133930001481,
+        0.6357413510004335
+      ],
+      "median_seconds": 0.5964133930001481,
+      "audio_duration_seconds": 0.05,
+      "output_samples": 800
+    },
+    "Drama_streaming_SoXR": {
+      "seconds": [
+        0.0001870300002337899,
+        6.356500034598866e-05,
+        5.143699945620028e-05,
+        4.676000025938265e-05,
+        4.73810005132691e-05
+      ],
+      "median_seconds": 5.143699945620028e-05,
+      "audio_duration_seconds": 0.05,
+      "output_samples": 800
+    }
+  }
+}

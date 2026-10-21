@@ -1,0 +1,444 @@
+{
+  "status": "passed",
+  "checks_passed": 81,
+  "source_commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+  "config_sha256": "476b2a7eeeb222cf8ce7106bccc77f27dffeed89fafef3ec41bbd06cc20d0de5",
+  "scope": "Real upstream config/RuntimeConfig and SDK models; GPU adapter methods compiled unchanged from source AST with mocked transcribe. No model inference, GPU, microphone, or pronunciation validation.",
+  "versions": {
+    "openai": "2.28.0",
+    "pydantic": "2.14.0",
+    "PyYAML": "6.0.3",
+    "numpy": "2.3.5"
+  },
+  "asr_language_arguments": [
+    {
+      "beam_size": 1,
+      "without_timestamps": false
+    },
+    {
+      "beam_size": 1,
+      "without_timestamps": false,
+      "language": "zh"
+    },
+    {
+      "beam_size": 1,
+      "without_timestamps": false,
+      "language": "en"
+    },
+    {
+      "beam_size": 1,
+      "without_timestamps": false
+    },
+    {
+      "beam_size": 1,
+      "without_timestamps": false
+    }
+  ],
+  "checks": [
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/STT/faster_whisper_handler.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/TTS/qwen3_tts_handler.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/api/openai_realtime/runtime_config.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/api/openai_realtime/handlers/session.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/LLM/lm_output_processor.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/LLM/utils.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/LLM/voice_prompt.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/pipeline/language_detection.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/faster-qwen3-tts/faster_qwen3_tts/model.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/openai-python/src/openai/types/realtime/audio_transcription.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/LLM/chat.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/utils/utils.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/_config_yaml.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/__init__.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/config.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/backend_registry.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/pipeline/cancel_scope.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/pipeline/speculative_turns.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/arguments_classes/orukeet_stt_arguments.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/arguments_classes/omnivoice_tts_arguments.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/arguments_classes/chat_tts_arguments.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/arguments_classes/responses_api_language_model_arguments.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/arguments_classes/minimax_tts_arguments.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/arguments_classes/w2v_stv_arguments.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/arguments_classes/qwen3_asr_stt_arguments.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/arguments_classes/module_arguments.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/arguments_classes/drama3_tts_arguments.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/arguments_classes/local_audio_arguments.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/arguments_classes/parakeet_tdt_arguments.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/arguments_classes/kitten_tts_arguments.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/arguments_classes/supertonic_tts_arguments.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/arguments_classes/chat_completions_language_model_arguments.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/arguments_classes/qwen3_tts_arguments.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/arguments_classes/nemotron_streaming_stt_arguments.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/arguments_classes/openai_stt_arguments.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/arguments_classes/language_model_base_arguments.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/arguments_classes/openai_tts_arguments.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/arguments_classes/vad_arguments.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/arguments_classes/vllm_realtime_stt_arguments.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/arguments_classes/openai_realtime_stt_arguments.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/arguments_classes/sense_voice_stt_arguments.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/arguments_classes/language_model_arguments.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/arguments_classes/paraformer_stt_arguments.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/arguments_classes/parakeet_unified_stt_arguments.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/arguments_classes/__init__.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/arguments_classes/kokoro_tts_arguments.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/arguments_classes/whisper_stt_arguments.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/arguments_classes/realtime_server_arguments.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/arguments_classes/mlx_audio_whisper_arguments.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/arguments_classes/facebookmms_tts_arguments.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/arguments_classes/pocket_tts_arguments.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "source: sources/speech-to-speech/src/speech_to_speech/arguments_classes/faster_whisper_stt_arguments.py",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "real upstream resolver accepts current YAML",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "ASR config uses string auto",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "TTS config uses model auto",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "assistant single-language detector disabled",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "dynamic language prompt disabled",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "dynamic language prompt upstream default false",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "ASR YAML null rejected by real upstream schema",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "new runtime has no selected language",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "real SDK and handler select zh",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "omission retains prior zh",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "explicit null clears prior zh",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "null leaf preserves configured voice",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "string auto remains distinct from null",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "explicit null clears string auto",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "ASR adapter omits language for session None",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "ASR adapter forwards explicit zh",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "ASR adapter forwards explicit en",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "ASR adapter omits language for session 'auto'",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "ASR adapter omits language for session None",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "Qwen Auto case normalization",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "Qwen null session ignores single language label None",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "Qwen null session ignores single language label 'zh'",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "Qwen null session ignores single language label 'en'",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "string auto can force Chinese",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "string auto can force English",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "manual zh routes Chinese when processor supplies zh",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "manual en routes English when processor supplies en",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "no GPU or inference libraries imported",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "OpenAI SDK is pinned version",
+      "passed": true,
+      "detail": null
+    }
+  ]
+}

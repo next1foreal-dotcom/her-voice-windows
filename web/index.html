@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#080d11" />
+    <meta name="description" content="本機語音介面：收音、字幕、串流播放與可配置的 Agent 接口。" />
+    <title>HER Voice</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23080d11'/%3E%3Cpath d='M9 8v16M23 8v16M9 16h14' stroke='%23b9dedb' stroke-width='2'/%3E%3C/svg%3E" />
+  </head>
+  <body>
+    <svg class="icon-library" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+      <symbol id="icon-mic" viewBox="0 0 24 24"><rect x="9" y="2.5" width="6" height="13" rx="3"/><path d="M5.5 10.5v2a6.5 6.5 0 0 0 13 0v-2M12 19v3M8.5 22h7"/></symbol>
+      <symbol id="icon-mic-off" viewBox="0 0 24 24"><path d="M9 5.5v1M15 9V5.5a3 3 0 0 0-5.6-1.5M9 11v1.5a3 3 0 0 0 5.1 2.1M5.5 10.5v2a6.5 6.5 0 0 0 10.9 4.8M18.5 12.5v-2M12 19v3M8.5 22h7M3 3l18 18"/></symbol>
+      <symbol id="icon-captions" viewBox="0 0 24 24"><path d="M3 3.5h18v16H8l-5 3v-19Z"/><path d="M7 8h10M7 12h6M7 16h3"/></symbol>
+      <symbol id="icon-speaker" viewBox="0 0 24 24"><path d="m13 3-6 5H3v8h4l6 5V3ZM17 8a7 7 0 0 1 0 8M20 5a11 11 0 0 1 0 14"/></symbol>
+      <symbol id="icon-keyboard" viewBox="0 0 24 24"><rect x="2" y="4.5" width="20" height="15" rx="1.5"/><path d="M6 8.5h.01M10 8.5h.01M14 8.5h.01M18 8.5h.01M6 12h.01M10 12h.01M14 12h.01M18 12h.01M7 15.5h10"/></symbol>
+      <symbol id="icon-phone" viewBox="0 0 24 24"><path d="m5 3 3 1 1 5-2.4 1.6a15 15 0 0 0 6.8 6.8L15 15l5 1 1 3c.3 1-.5 2-1.6 2C10.3 21 3 13.7 3 4.6 3 3.5 4 2.7 5 3Z"/></symbol>
+      <symbol id="icon-end" viewBox="0 0 24 24"><path d="M3 13c5-5 13-5 18 0v5h-5v-4a12 12 0 0 0-8 0v4H3v-5Z"/></symbol>
+      <symbol id="icon-history" viewBox="0 0 24 24"><path d="M20.5 11a8.5 8.5 0 0 1-8.5 8.5H6L2.5 22v-7A9 9 0 1 1 20.5 11Z"/><path d="M7.5 10.5h.01M12 10.5h.01M16.5 10.5h.01"/></symbol>
+      <symbol id="icon-settings" viewBox="0 0 24 24"><path d="m9 3 .8-1h4.4L15 3l.5 2 2 .9 2-.5 2.2 3.8-1.4 1.5V13l1.4 1.5-2.2 3.8-2-.5-2 .9-.5 2-.8 1H9.8l-.8-1-.5-2-2-.9-2 .5-2.2-3.8L3.7 13v-2.3L2.3 9.2l2.2-3.8 2 .5 2-.9L9 3Z"/><circle cx="12" cy="11.8" r="3.4"/></symbol>
+      <symbol id="icon-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+      <symbol id="icon-arrow" viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"/></symbol>
+      <symbol id="icon-send" viewBox="0 0 24 24"><path d="m12 4 7 7M12 4l-7 7M12 4v16"/></symbol>
+      <symbol id="icon-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></symbol>
+      <symbol id="icon-trash" viewBox="0 0 24 24"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></symbol>
+      <symbol id="icon-chevron" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></symbol>
+    </svg>
+
+    <div id="voice-app" class="voice-shell" data-state="idle" data-mode="live" data-connection="disconnected">
+      <header class="app-header">
+        <a class="wordmark" href="./" aria-label="HER Voice 首頁"><span class="wordmark-her">HER</span><span class="wordmark-divider" aria-hidden="true"></span><span class="wordmark-voice">VOICE</span></a>
+        <div class="header-actions">
+          <div class="connection-status" aria-label="連線狀態"><span class="connection-dot" aria-hidden="true"></span><span id="connection-label">未連線</span></div>
+          <span class="header-divider" aria-hidden="true"></span>
+          <button class="header-button" id="history-button" type="button" aria-label="開啟會話記錄" aria-haspopup="dialog" aria-controls="history-dialog"><svg class="icon"><use href="#icon-history"/></svg><span>會話</span></button>
+          <button class="header-button" id="settings-button" type="button" aria-label="開啟聲音與連線設定" aria-haspopup="dialog" aria-controls="settings-dialog"><svg class="icon"><use href="#icon-settings"/></svg><span>設定</span></button>
+        </div>
+      </header>
+
+      <main class="voice-stage" id="main-content" aria-labelledby="main-caption">
+        <p id="mode-notice" class="mode-notice" hidden>示範模式 · 不開啟麥克風，不呼叫 API</p>
+        <div id="error-notice" class="error-notice" role="alert" hidden><p id="error-message"></p><button id="error-settings" class="text-button" type="button">查看設定<svg class="icon"><use href="#icon-arrow"/></svg></button></div>
+        <div class="sound-field" aria-hidden="true"><canvas id="sound-canvas"></canvas></div>
+        <div id="waveform" class="waveform" aria-hidden="true"></div>
+        <div class="caption-stage">
+          <p id="user-caption" class="user-caption" hidden><span class="caption-speaker">你</span><span id="user-caption-text"></span></p>
+          <h1 id="main-caption">準備好聽你說。</h1>
+          <p id="supporting-caption" class="supporting-caption">從一個念頭，開始一段對話。</p>
+          <div class="response-details"><button id="interrupt-button" class="interrupt-button" type="button" hidden><svg class="icon"><use href="#icon-stop"/></svg>打斷回覆<span class="key-hint">Esc</span></button><span id="latency-label" class="latency-label" hidden></span></div>
+        </div>
+      </main>
+
+      <div class="bottom-region">
+        <form id="text-composer" class="text-composer" hidden>
+          <label class="sr-only" for="message-input">輸入訊息</label>
+          <textarea id="message-input" rows="1" placeholder="想打字也可以…" autocomplete="off" aria-describedby="composer-hint"></textarea>
+          <button id="send-button" class="send-button" type="submit" aria-label="送出訊息" disabled><svg class="icon"><use href="#icon-send"/></svg></button>
+          <p id="composer-hint" class="composer-hint">Enter 送出 · Shift + Enter 換行</p>
+        </form>
+        <section class="call-controls" aria-label="語音控制">
+          <div class="control-with-label"><button id="mic-button" class="round-control" type="button" aria-label="暫停麥克風" aria-pressed="false" disabled><svg class="icon"><use href="#icon-mic"/></svg></button><span id="mic-label">麥克風</span></div>
+          <div class="control-with-label"><button id="captions-button" class="round-control" type="button" aria-label="隱藏字幕" aria-pressed="true"><svg class="icon"><use href="#icon-captions"/></svg></button><span>字幕</span></div>
+          <button id="call-button" class="call-button" type="button"><svg class="icon"><use href="#icon-phone"/></svg><span id="call-label">開始對話</span></button>
+          <div class="control-with-label"><button id="sound-button" class="round-control" type="button" aria-label="選擇播放裝置" aria-haspopup="dialog" aria-controls="settings-dialog"><svg class="icon"><use href="#icon-speaker"/></svg></button><span>聲音</span></div>
+          <div class="control-with-label"><button id="keyboard-button" class="round-control" type="button" aria-label="顯示文字輸入" aria-expanded="false" aria-controls="text-composer"><svg class="icon"><use href="#icon-keyboard"/></svg></button><span>輸入</span></div>
+        </section>
+      </div>
+
+      <footer class="app-footer"><p id="architecture-label">本機聽說 · DeepSeek 對話</p><button id="mode-button" class="text-button" type="button"><span id="mode-button-label">試用示範</span><svg class="icon"><use href="#icon-arrow"/></svg></button></footer>
+    </div>
+
+    <dialog id="settings-dialog" class="side-panel" aria-labelledby="settings-title">
+      <div class="panel-heading"><div><p class="panel-context">HER VOICE</p><h2 id="settings-title">聲音與連線</h2></div><button class="close-button" type="button" data-close-dialog aria-label="關閉設定"><svg class="icon"><use href="#icon-close"/></svg></button></div>
+      <div class="panel-body">
+        <section class="settings-section" aria-labelledby="provider-settings-title">
+          <div class="settings-section-heading"><h3 id="provider-settings-title">回答接口</h3><button id="provider-reload" class="text-button" type="button">重新讀取</button></div>
+          <p id="provider-current" class="voice-current">尚未讀取接口設定</p>
+          <form id="provider-form" autocomplete="off">
+            <fieldset id="provider-fields" class="provider-fields" disabled>
+              <label class="field-label" for="provider-kind">供應商</label>
+              <div class="select-wrap"><select id="provider-kind"><option value="deepseek">DeepSeek</option><option value="openai-compatible">相容 OpenAI 的接口／Agent</option></select><svg class="icon"><use href="#icon-chevron"/></svg></div>
+              <label class="field-label" for="provider-url">接口網址</label>
+              <input id="provider-url" class="voice-input" type="url" maxlength="2048" placeholder="https://api.deepseek.com/chat/completions" required />
+              <div class="settings-section-heading"><label class="field-label" for="provider-model-list">模型</label><button id="provider-models-refresh" class="text-button" type="button">拉取模型</button></div>
+              <div class="select-wrap"><select id="provider-model-list" aria-describedby="provider-models-message"><option value="">請先拉取模型</option></select><svg class="icon"><use href="#icon-chevron"/></svg></div>
+              <p id="provider-models-message" class="field-help" role="status" aria-live="polite">從目前接口讀取可用模型。</p>
+              <button id="provider-model-manual" class="text-button" type="button" aria-expanded="false" aria-controls="provider-model">手動輸入模型</button>
+              <input id="provider-model" class="voice-input" type="text" aria-label="手動模型名稱" maxlength="256" placeholder="填寫接口提供的模型 ID" hidden />
+              <label class="field-label" for="provider-key">API Key</label>
+              <div class="provider-key-row"><input id="provider-key" class="voice-input" type="password" maxlength="4096" autocomplete="new-password" spellcheck="false" aria-describedby="provider-key-help" /><button id="provider-key-show" class="text-button" type="button" aria-pressed="false">顯示</button></div>
+              <p id="provider-key-help" class="field-help">Key 儲存在本機。已儲存的 Key 不會回傳；留空會保留同一接口的 Key。</p>
+              <button id="provider-test" class="voice-secondary-button" type="button">測試連線</button>
+              <button id="provider-save" class="panel-primary voice-apply-button" type="submit">儲存並套用</button>
+            </fieldset>
+          </form>
+          <p class="field-help">測試會傳送一則短訊息到所選接口。變更設定會結束目前對話；設定未變時會保留連線與模型。</p>
+          <p id="provider-message" class="voice-admin-message" role="status" aria-live="polite" hidden></p>
+        </section>
+        <section class="settings-section voice-settings-section" aria-labelledby="voice-settings-title">
+          <div class="settings-section-heading"><h3 id="voice-settings-title">声音与模型</h3><button id="voice-refresh-button" class="text-button" type="button">刷新状态</button></div>
+          <p id="voice-current" class="voice-current">正在读取本机声音设置</p>
+          <label class="field-label" for="voice-backend">语音后端</label>
+          <div class="select-wrap"><select id="voice-backend"><option value="drama3">Drama 3 · 主后端</option><option value="qwen3">Qwen3-TTS Base · 备用</option></select><svg class="icon"><use href="#icon-chevron"/></svg></div>
+          <label class="field-label" for="voice-select">参考音色</label>
+          <div class="select-wrap"><select id="voice-select" aria-describedby="voice-details"><option value="">请先导入一段参考录音</option></select><svg class="icon"><use href="#icon-chevron"/></svg></div>
+          <p id="voice-details" class="field-help">两个后端共用原始录音，各自生成音色提示。</p>
+          <button id="voice-apply-button" class="panel-primary voice-apply-button" type="button" disabled>应用声音设置</button>
+          <p class="field-help">更换音色或后端时会结束当前会话并释放原引擎，已完成的文字保留。设置未变时会保留当前对话与模型。</p>
+          <details id="voice-import-details" class="voice-import-details">
+            <summary>导入新音色<span aria-hidden="true">＋</span></summary>
+            <form id="voice-import-form" class="voice-import-form">
+              <label class="field-label" for="voice-name">音色名称</label><input id="voice-name" class="voice-input" type="text" maxlength="80" placeholder="例如：Joyboi 的声音" autocomplete="off" required />
+              <label class="field-label" for="voice-file">参考录音 · WAV</label><input id="voice-file" class="voice-input voice-file" type="file" accept=".wav,audio/wav,audio/x-wav" required aria-describedby="voice-file-help" />
+              <p id="voice-file-help" class="field-help">建议使用 5–15 秒单人、清晰、无背景音乐的录音。支持 1–30 秒、PCM 16-bit WAV、最大 12 MiB。</p>
+              <label class="field-label" for="voice-transcript">录音中说的完整文字</label><textarea id="voice-transcript" class="voice-input" rows="4" maxlength="2000" placeholder="准确填写这段录音的内容，保留中英文原文。" required></textarea>
+              <button id="voice-import-button" class="voice-secondary-button" type="submit">保存参考音色</button>
+              <p class="field-help">录音保存在本机。导入不会调用 DeepSeek，也不会立即开始合成。</p>
+            </form>
+          </details>
+          <p id="voice-admin-message" class="voice-admin-message" role="status" aria-live="polite" hidden></p>
+          <p id="voice-admin-error" class="voice-admin-error" role="alert" hidden></p>
+        </section>
+        <section class="settings-section" aria-labelledby="audio-settings-title"><h3 id="audio-settings-title">音訊裝置</h3>
+          <label class="field-label" for="mic-device">麥克風</label><div class="select-wrap"><select id="mic-device"><option value="">系統預設麥克風</option></select><svg class="icon"><use href="#icon-chevron"/></svg></div>
+          <label class="field-label" for="output-device">播放裝置</label><div class="select-wrap"><select id="output-device"><option value="">系統預設揚聲器</option></select><svg class="icon"><use href="#icon-chevron"/></svg></div>
+          <p class="field-help" id="device-help">開始對話並允許麥克風後，會顯示可用裝置。</p>
+        </section>
+        <section class="settings-section" aria-labelledby="conversation-settings-title"><h3 id="conversation-settings-title">對話方式</h3>
+          <p class="field-label" id="speech-language">語音語言：中文 / English，自動辨識</p>
+          <p class="field-help" id="speech-language-help">可直接要求改用中文或英文回答。</p>
+          <label class="toggle-row" for="captions-setting"><span><strong>即時字幕</strong><small>在主畫面顯示你與 HER 的對話</small></span><input id="captions-setting" type="checkbox" role="switch" checked/><span class="switch-track" aria-hidden="true"></span></label>
+          <label class="toggle-row" for="barge-in-setting"><span><strong>允許插話</strong><small>開口時停止目前的語音播放</small></span><input id="barge-in-setting" type="checkbox" role="switch" checked/><span class="switch-track" aria-hidden="true"></span></label>
+        </section>
+        <section class="settings-section service-section" aria-labelledby="service-settings-title"><h3 id="service-settings-title">服務狀態</h3><dl class="service-list"><div><dt>連線模式</dt><dd id="service-mode">真實連線</dd></div><div><dt>語音服務</dt><dd id="service-engine">尚未檢查</dd></div><div><dt>語音設定</dt><dd id="service-profile">尚未檢查</dd></div><div><dt>回答接口</dt><dd id="service-key">尚未檢查</dd></div></dl></section>
+      </div>
+      <div class="panel-footer"><button id="settings-done" class="panel-primary" type="button" data-close-dialog>完成</button></div>
+    </dialog>
+
+    <dialog id="history-dialog" class="side-panel history-panel" aria-labelledby="history-title">
+      <div class="panel-heading"><div><p class="panel-context">HER VOICE</p><h2 id="history-title">本次會話</h2></div><button class="close-button" type="button" data-close-dialog aria-label="關閉會話記錄"><svg class="icon"><use href="#icon-close"/></svg></button></div>
+      <div id="history-scroll" class="panel-body history-body"><div id="history-empty" class="history-empty"><svg class="icon"><use href="#icon-history"/></svg><h3>還沒有對話。</h3><p>開始後，字幕會留在這裡。</p></div><ol id="history-list" class="history-list" aria-label="對話字幕"></ol></div>
+      <div class="panel-footer"><button id="clear-history" class="text-button clear-history" type="button" disabled><svg class="icon"><use href="#icon-trash"/></svg>清除並重設對話</button><p>清除會結束連線並重設對話。</p></div>
+    </dialog>
+    <div id="announcer" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+    <noscript><div class="noscript-notice">HER Voice 需要 JavaScript 才能連接本機語音服務。請在瀏覽器中啟用 JavaScript。</div></noscript>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

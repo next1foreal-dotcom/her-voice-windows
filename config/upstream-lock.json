@@ -1,0 +1,176 @@
+{
+  "checked_at": "2026-10-20",
+  "repository": "https://github.com/huggingface/speech-to-speech",
+  "version": "1.0.0",
+  "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+  "commit_timestamp": "2026-10-19T18:13:59Z",
+  "transport": "OpenAI Realtime GA WebSocket",
+  "wire_audio": "PCM16LE mono 24000 Hz, JSON base64",
+  "models": [
+    {
+      "repository": "Systran/faster-whisper-small",
+      "revision": "536b0662742c02347bc0e980a01041f333bce120",
+      "download": "complete snapshot",
+      "environment_key": "HER_ASR_MODEL_PATH",
+      "required_files": [
+        "config.json",
+        "model.bin",
+        "tokenizer.json",
+        "vocabulary.txt"
+      ],
+      "source": "https://huggingface.co/Systran/faster-whisper-small/commit/536b0662742c02347bc0e980a01041f333bce120"
+    },
+    {
+      "repository": "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+      "revision": "5d83992436eae1d760afd27aff78a71d676296fc",
+      "download": "complete snapshot",
+      "environment_key": "HER_TTS_MODEL_PATH",
+      "required_files": [
+        "config.json",
+        "generation_config.json",
+        "model.safetensors",
+        "merges.txt",
+        "vocab.json",
+        "tokenizer_config.json",
+        "preprocessor_config.json",
+        "speech_tokenizer/config.json",
+        "speech_tokenizer/configuration.json",
+        "speech_tokenizer/model.safetensors",
+        "speech_tokenizer/preprocessor_config.json"
+      ],
+      "source": "https://huggingface.co/Qwen/Qwen3-TTS-12Hz-0.6B-Base/commit/5d83992436eae1d760afd27aff78a71d676296fc"
+    },
+    {
+      "repository": "pipecat-ai/smart-turn-v3",
+      "revision": "f766f81d3cfdf7737ac64aad813d91bbfd56bf93",
+      "download": "smart-turn-v3.2-cpu.onnx",
+      "environment_key": "HER_SMART_TURN_MODEL_PATH",
+      "required_files": [
+        "smart-turn-v3.2-cpu.onnx"
+      ],
+      "source": "https://huggingface.co/pipecat-ai/smart-turn-v3/commit/f766f81d3cfdf7737ac64aad813d91bbfd56bf93"
+    },
+    {
+      "repository": "snakers4/silero-vad",
+      "revision": "1e261b036686cd0017d500ee96acd1c4ba572a9d",
+      "download": "torch.hub pinned Git ref; bundled silero_vad.jit",
+      "source": "https://github.com/snakers4/silero-vad/tree/1e261b036686cd0017d500ee96acd1c4ba572a9d"
+    },
+    {
+      "repository": "Jmica/Drama-3-GGUF",
+      "revision": "17a5b40c5dc2c2be986f5371a7e650108b828e29",
+      "download": "drama-3-backbone-8bit-experts-Q4_K_S.gguf",
+      "size_bytes": 24596497888,
+      "sha256": "05af716baf78e7c20863b9ccebb3ebdeca9607dd3ea7d0b72c35079e675b212b",
+      "prepared_by": "scripts/prepare-drama.py",
+      "manifest": ".runtime/drama3/runtime.json",
+      "source": "https://huggingface.co/Jmica/Drama-3-GGUF/tree/17a5b40c5dc2c2be986f5371a7e650108b828e29"
+    }
+  ],
+  "josie_reference": "https://github.com/Goekdeniz-Guelmez/JOSIE-Voice",
+  "josie_note": "Interaction design reference only. No private application source was used.",
+  "model_revision_note": "ASR/Qwen/SmartTurn use immutable local snapshot paths. Drama uses a fixed GGUF revision with complete size and SHA-256 validation; its native runtime is separately pinned. Silero retains its original recorded patch. No speech weights were downloaded or inferred in the delivery environment. Cloud LLM implementations, the full Windows transitive environment and GPU arithmetic are not bitwise locked.",
+  "patches": [
+    {
+      "name": "pin-silero-source",
+      "file": "speech_to_speech/VAD/vad_handler.py",
+      "original_sha256": "d6feeb9f4442240c9a493ac86ec076033882c8efece6020d2ec7cfbfebd70b7c",
+      "patched_sha256": "2613d149b238b4c50b9ff2ae9da3f22ff6db527d9a2efac40fb9dfcc764db7f1",
+      "description": "Exactly one master ref replaced by a verified full Silero commit; installer applies, live worker verifies."
+    }
+  ],
+  "llm": {
+    "provider": "DeepSeek",
+    "model": "deepseek-flash",
+    "thinking": "disabled",
+    "stream": true
+  },
+  "project_version": "0.4.0",
+  "native_runtimes": [
+    {
+      "name": "audio.cpp",
+      "repository": "https://github.com/0xShug0/audio.cpp.git",
+      "commit": "0bf4d155f2af5f85853415170622dc145e3d62c3",
+      "platform": "native Windows x64",
+      "preset": "windows-cuda-release",
+      "model_set": "custom",
+      "models": [
+        "fish_drama3"
+      ],
+      "target": "audiocpp_server",
+      "cuda_architectures": "89",
+      "cpu_arch": "avx2",
+      "deployment_build": true,
+      "model_id": "drama-3",
+      "bind_host": "127.0.0.1",
+      "default_port": 8792,
+      "native_audio": "PCM16LE mono 44100 Hz",
+      "session_options": {
+        "fish_drama3.disk_experts": true,
+        "fish_drama3.pin_experts": true,
+        "fish_drama3.expert_cache_size": 8,
+        "fish_drama3.cpu_expert_layers": 0,
+        "fish_drama3.codec_backend": "same",
+        "fish_drama3.context_length": 2048
+      },
+      "default_request_options": {
+        "max_tokens": 500
+      },
+      "expert_execution": "GPU; pinned host expert banks with per-layer GPU cache",
+      "source": "https://github.com/0xShug0/audio.cpp/tree/0bf4d155f2af5f85853415170622dc145e3d62c3"
+    }
+  ],
+  "tts_selection": {
+    "default_backend": "drama3",
+    "fallback_backend": "qwen3",
+    "automatic_fallback": false,
+    "simultaneous_tts_backends": 1,
+    "shared_reference": "Local mono PCM16 WAV and exact transcript; no shared embeddings",
+    "input_reference_seconds": {
+      "minimum": 1,
+      "maximum": 30,
+      "recommended": [
+        5,
+        15
+      ]
+    },
+    "session_output_voice": "omitted; backend profile selects the imported reference"
+  },
+  "runtime_hooks": [
+    {
+      "name": "drama-streaming-soxr",
+      "backend": "drama3",
+      "implementation": "her_voice/drama_resampler.py",
+      "upstream_module": "speech_to_speech.TTS.openai_compatible_handler",
+      "original_sha256_lf_normalized": "8723e77e9ba7ebe6e0ae9a3b746cdf87b1faefeeb0c7114aed24986c98c3d3a8",
+      "replacement": "_StreamingFIRResampler -> StreamingSoxrResampler in memory only",
+      "package": "soxr",
+      "version": "1.0.0",
+      "source_sample_rate": 44100,
+      "target_sample_rate": 16000,
+      "channels": 1,
+      "disk_source_modified": false
+    }
+  ],
+  "python_constraints": {
+    "speech-to-speech": "1.0.0",
+    "torch": "2.11.0+cu128",
+    "torchaudio": "2.11.0+cu128",
+    "transformers": "5.18.0",
+    "openai": "2.28.0",
+    "faster-whisper": "1.2.1",
+    "ctranslate2": "4.8.3",
+    "faster-qwen3-tts": "0.5.4",
+    "qwen-tts-hf": "0.1.1.post1",
+    "aiohttp": "3.14.5",
+    "soxr": "1.0.0"
+  },
+  "validation_scope": {
+    "windows_installation": "not run",
+    "native_cuda_build": "not run",
+    "real_model_inference": "not run",
+    "real_audio_devices": "not tested",
+    "paid_api_request": "not run",
+    "profile_contract_evidence": "docs/evidence/tts-profile-contract-2026-10-20.json"
+  }
+}

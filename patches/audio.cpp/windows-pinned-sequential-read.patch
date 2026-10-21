@@ -1,0 +1,304 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 86249b5..05a9446 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -3817,6 +3817,11 @@ if (ENGINE_BUILD_TESTS OR ENGINE_BUILD_EXTENDED_TESTS OR ENGINE_BUILD_MODEL_TEST
+         add_test(NAME encoder_module_test COMMAND encoder_module_test)
+ 
+         add_engine_unittest(disk_expert_weight_store_test tests/unittests/test_disk_expert_weight_store.cpp)
++        if (MSVC)
++            # This test deliberately throws from a C++ callback through ggml's
++            # extern-C scheduler API; /EHsc would assume that call cannot throw.
++            target_compile_options(disk_expert_weight_store_test PRIVATE /EHc-)
++        endif()
+         add_test(NAME disk_expert_weight_store_test COMMAND disk_expert_weight_store_test --log)
+ 
+         add_engine_unittest(transpose_module_test tests/unittests/test_transpose_module.cpp)
+diff --git a/include/engine/framework/core/disk_expert_weight_store.h b/include/engine/framework/core/disk_expert_weight_store.h
+index 833e18f..3b4323f 100644
+--- a/include/engine/framework/core/disk_expert_weight_store.h
++++ b/include/engine/framework/core/disk_expert_weight_store.h
+@@ -27,7 +27,11 @@ public:
+         double stage_ms = 0;
+     };
+ 
+-    explicit DiskExpertWeightStore(const std::filesystem::path & gguf_path, bool pin_experts = false);
++    explicit DiskExpertWeightStore(const std::filesystem::path & gguf_path, bool pin_experts = false,
++                                  bool defer_pinned_reads = false);
++    // Fill allocated pinned banks in file-offset order before model readiness.
++    // stage() also completes pending banks for standalone callers.
++    void load_pinned_experts();
+     ~DiskExpertWeightStore();
+     DiskExpertWeightStore(const DiskExpertWeightStore &) = delete;
+     DiskExpertWeightStore & operator=(const DiskExpertWeightStore &) = delete;
+diff --git a/src/community_models/fish_drama3/backbone.cpp b/src/community_models/fish_drama3/backbone.cpp
+index 21f6abb..5935a6c 100644
+--- a/src/community_models/fish_drama3/backbone.cpp
++++ b/src/community_models/fish_drama3/backbone.cpp
+@@ -310,7 +310,7 @@ std::shared_ptr<Drama3BackboneWeights> load_qwen35_weights(
+             throw std::runtime_error("Drama 3 disk experts require native GGUF weight types");
+         if (c.expert_cache_size < c.experts_per_token || c.expert_cache_size > c.experts)
+             throw std::runtime_error("Drama 3 expert_cache_size must cover top-k and not exceed the expert count");
+-        weights->disk_store = std::make_unique<core::DiskExpertWeightStore>(source.source_path(), c.pin_experts);
++        weights->disk_store = std::make_unique<core::DiskExpertWeightStore>(source.source_path(), c.pin_experts, true);
+     }
+     weights->token_embedding = weights->store->load_tensor(
+         source,
+@@ -366,6 +366,7 @@ std::shared_ptr<Drama3BackboneWeights> load_qwen35_weights(
+             c.hidden_size,
+             false);
+     }
++    if (weights->disk_store) weights->disk_store->load_pinned_experts();
+     weights->store->upload();
+     if (weights->cpu_store) weights->cpu_store->upload();
+     return weights;
+diff --git a/src/framework/core/disk_expert_weight_store.cpp b/src/framework/core/disk_expert_weight_store.cpp
+index f28bffd..2a980f0 100644
+--- a/src/framework/core/disk_expert_weight_store.cpp
++++ b/src/framework/core/disk_expert_weight_store.cpp
+@@ -15,6 +15,13 @@
+ #include <unordered_set>
+ #include <utility>
+ 
++#if defined(_WIN32)
++#ifndef NOMINMAX
++#define NOMINMAX
++#endif
++#include <windows.h>
++#endif
++
+ namespace engine::core {
+ 
+ class DiskExpertWeightStore::Impl {
+@@ -27,7 +34,13 @@ public:
+         size_t offset, expert_bytes;
+         const std::byte * host_data = nullptr;
+     };
++    struct PendingRead {
++        size_t offset, bytes;
++        std::byte * destination;
++        bool loaded = false;
++    };
+     struct Group {
++        std::vector<PendingRead> pending;
+         std::unique_ptr<ggml_context, ContextDeleter> context;
+         ggml_backend_buffer_t buffer = nullptr;
+         ggml_backend_buffer_t host_buffer = nullptr;
+@@ -49,7 +62,8 @@ public:
+         std::byte * data() { return buffer ? static_cast<std::byte *>(ggml_backend_buffer_get_base(buffer)) : bytes.data(); }
+     };
+ 
+-    Impl(const std::filesystem::path & path, bool pin) : file(path, std::ios::binary), pin_experts(pin) {
++    Impl(const std::filesystem::path & path, bool pin, bool defer)
++        : file(path, std::ios::binary), source_path(path), defer_pinned_reads(defer), pin_experts(pin) {
+         if (!file) throw std::runtime_error("cannot open disk expert GGUF: " + path.string());
+         ggml_context * tensors = nullptr;
+         std::unique_ptr<gguf_context, HeaderDeleter> header(
+@@ -81,10 +95,64 @@ public:
+             if (!projections.emplace(name, Projection{tensor->type, tensor->ne[0], tensor->ne[1],
+                 tensor->ne[2], offset, expert_bytes}).second) throw std::runtime_error("duplicate expert bank: " + name);
+         }
++#if defined(_WIN32)
++        if (!pin_experts) mapped_file = io::read_binary_blob(path, true);
++#else
+         mapped_file = io::read_binary_blob(path, true);
++#endif
++    }
++
++    void load_pinned_experts() {
++        if (!pinned_pending) return;
++        std::vector<PendingRead *> reads;
++        for (auto & group : groups)
++            for (auto & read : group->pending)
++                if (!read.loaded) reads.push_back(&read);
++        std::stable_sort(reads.begin(), reads.end(), [](const auto * a, const auto * b) {
++            return a->offset < b->offset;
++        });
++#if defined(_WIN32)
++        struct File {
++            HANDLE handle = INVALID_HANDLE_VALUE;
++            ~File() { if (handle != INVALID_HANDLE_VALUE) CloseHandle(handle); }
++        } input;
++        input.handle = CreateFileW(source_path.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr,
++                                   OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
++        if (input.handle == INVALID_HANDLE_VALUE)
++            throw std::runtime_error("cannot open pinned expert GGUF for sequential reading");
++#endif
++        const auto started = std::chrono::steady_clock::now();
++        for (auto * read : reads) {
++#if defined(_WIN32)
++            LARGE_INTEGER position{};
++            position.QuadPart = static_cast<LONGLONG>(read->offset);
++            if (!SetFilePointerEx(input.handle, position, nullptr, FILE_BEGIN))
++                throw std::runtime_error("cannot seek pinned host expert bank");
++            for (size_t done = 0; done < read->bytes;) {
++                const auto count = static_cast<DWORD>(std::min<size_t>(16 * 1024 * 1024, read->bytes - done));
++                DWORD received = 0;
++                ++host_read_calls;
++                if (!ReadFile(input.handle, read->destination + done, count, &received, nullptr) || received == 0)
++                    throw std::runtime_error("failed to read pinned host expert bank");
++                done += received;
++            }
++#else
++            std::memcpy(read->destination, mapped_file.data() + read->offset, read->bytes);
++            mapped_file.discard_range(read->offset, read->bytes);
++#endif
++            read->loaded = true;
++            stats.bytes_read += read->bytes;
++            loaded_host_bytes += read->bytes;
++            debug::timing_log_scalar("disk_experts.loaded_host_mb", double(loaded_host_bytes) / (1024 * 1024));
++        }
++        stats.read_ms += debug::elapsed_ms(started);
++        debug::timing_log_scalar("disk_experts.host_read_calls", double(host_read_calls));
++        debug::timing_log_scalar("disk_experts.host_read_ms", stats.read_ms);
++        pinned_pending = false;
+     }
+ 
+     std::vector<int32_t> stage(std::vector<int32_t> ids, size_t index) {
++        load_pinned_experts();
+         const auto stage_started = std::chrono::steady_clock::now();
+         auto & group = *groups.at(index);
+         const std::unordered_set<int32_t> required(ids.begin(), ids.end());
+@@ -164,6 +232,11 @@ public:
+     }
+ 
+     std::ifstream file;
++    std::filesystem::path source_path;
++    bool defer_pinned_reads = false;
++    bool pinned_pending = false;
++    size_t loaded_host_bytes = 0;
++    uint64_t host_read_calls = 0;
+     io::BinaryBlob mapped_file;
+     bool pin_experts;
+     std::map<std::string, Projection> projections;
+@@ -174,8 +247,9 @@ public:
+     Statistics stats;
+ };
+ 
+-DiskExpertWeightStore::DiskExpertWeightStore(const std::filesystem::path & path, bool pin_experts)
+-    : impl_(std::make_unique<Impl>(path, pin_experts)) {}
++DiskExpertWeightStore::DiskExpertWeightStore(const std::filesystem::path & path, bool pin_experts, bool defer_pinned_reads)
++    : impl_(std::make_unique<Impl>(path, pin_experts, defer_pinned_reads)) {}
++void DiskExpertWeightStore::load_pinned_experts() { impl_->load_pinned_experts(); }
+ DiskExpertWeightStore::~DiskExpertWeightStore() {
+     debug::timing_log_scalar("disk_experts.bytes_read", impl_->stats.bytes_read);
+     debug::timing_log_scalar("disk_experts.expert_loads", impl_->stats.expert_loads);
+@@ -217,22 +291,20 @@ size_t DiskExpertWeightStore::add_group(const std::vector<std::string> & names,
+         if (!host_type) throw std::runtime_error("pinned experts require a backend with pinned host buffers");
+         size_t host_bytes = 0;
+         for (const auto & projection : group->projections) host_bytes += projection.expert_bytes * projection.experts;
++        const auto allocation_started = std::chrono::steady_clock::now();
+         group->host_buffer = ggml_backend_buft_alloc_buffer(host_type, host_bytes);
++        debug::timing_log_scalar("disk_experts.host_alloc_ms", debug::elapsed_ms(allocation_started));
+         if (!group->host_buffer || ggml_backend_buffer_get_type(group->host_buffer) != host_type)
+             throw std::runtime_error("cannot allocate pinned host expert banks");
+         if (impl_->stats.host_buffer_bytes == 0)
+             debug::trace_log_scalar("disk_experts.host_buffer_type", ggml_backend_buft_name(host_type));
+         auto * data = static_cast<std::byte *>(ggml_backend_buffer_get_base(group->host_buffer));
+-        const auto started = std::chrono::steady_clock::now();
+         for (auto & projection : group->projections) {
+             const auto bytes = projection.expert_bytes * projection.experts;
+-            std::memcpy(data, impl_->mapped_file.data() + projection.offset, bytes);
+             projection.host_data = data;
++            group->pending.push_back({projection.offset, bytes, data});
+             data += bytes;
+-            impl_->stats.bytes_read += bytes;
+-            impl_->mapped_file.discard_range(projection.offset, bytes);
+         }
+-        impl_->stats.read_ms += debug::elapsed_ms(started);
+         impl_->stats.host_buffer_bytes += ggml_backend_buffer_get_size(group->host_buffer);
+     } else {
+         size_t staging_bytes = 0;
+@@ -260,6 +332,10 @@ size_t DiskExpertWeightStore::add_group(const std::vector<std::string> & names,
+     const auto index = impl_->groups.size();
+     impl_->groups.push_back(std::move(group));
+     impl_->routes.emplace("disk_experts.route." + std::to_string(index), index);
++    if (impl_->pin_experts) {
++        impl_->pinned_pending = true;
++        if (!impl_->defer_pinned_reads) impl_->load_pinned_experts();
++    }
+     return index;
+ }
+ 
+diff --git a/tests/unittests/test_disk_expert_weight_store.cpp b/tests/unittests/test_disk_expert_weight_store.cpp
+index e1ba0c2..6977d82 100644
+--- a/tests/unittests/test_disk_expert_weight_store.cpp
++++ b/tests/unittests/test_disk_expert_weight_store.cpp
+@@ -58,15 +58,16 @@ int main(int argc, char ** argv) {
+             entries.push_back({names[p], "F32", {12, 256, 256}, std::move(bytes)});
+         }
+         engine::io::write_safetensors_file(input, entries);
+-        const std::vector<std::pair<assets::TensorStorageType, bool>> modes{
+-            {assets::TensorStorageType::F32, false}, {assets::TensorStorageType::Q4_K, false},
+-            {assets::TensorStorageType::F32, true}, {assets::TensorStorageType::Q4_K, true}};
+-        for (const auto & [type, pin_experts] : modes) {
++        const std::vector<std::tuple<assets::TensorStorageType, bool, bool>> modes{
++            {assets::TensorStorageType::F32, false, false}, {assets::TensorStorageType::Q4_K, false, false},
++            {assets::TensorStorageType::F32, true, false}, {assets::TensorStorageType::Q4_K, true, false},
++            {assets::TensorStorageType::F32, true, true}, {assets::TensorStorageType::Q4_K, true, true}};
++        for (const auto & [type, pin_experts, defer_reads] : modes) {
+             assets::GgufConversionOptions options;
+             options.type_overrides.push_back({"model.layers.0.mlp.experts.*", type});
+             assets::convert_tensor_sources_to_gguf({{input, ""}}, gguf, assets::TensorStorageType::F32,
+                 true, false, {}, {}, std::nullopt, options);
+-            core::DiskExpertWeightStore disk(gguf, pin_experts);
++            core::DiskExpertWeightStore disk(gguf, pin_experts, defer_reads);
+             if (pin_experts && !ggml_backend_dev_host_buffer_type(ggml_backend_get_device(execution.backend()))) {
+                 bool rejected = false;
+                 try { disk.add_group(names, execution.backend(), 4); }
+@@ -81,6 +82,14 @@ int main(int argc, char ** argv) {
+                 throw std::runtime_error("expert payloads were eagerly read");
+             if (pin_experts && disk.statistics().host_buffer_bytes == 0)
+                 throw std::runtime_error("pinned expert banks were not allocated");
++            if (defer_reads && disk.statistics().bytes_read != 0)
++                throw std::runtime_error("deferred expert banks were read before explicit loading");
++            disk.load_pinned_experts();
++            const auto loaded = disk.statistics();
++            disk.load_pinned_experts();
++            if (disk.statistics().bytes_read != loaded.bytes_read ||
++                disk.statistics().host_buffer_bytes != loaded.host_buffer_bytes)
++                throw std::runtime_error("repeated pinned loading changed data or allocations");
+             auto source = assets::open_tensor_source(gguf);
+             const auto expected_type = type == assets::TensorStorageType::Q4_K ? "q4_k" : "f32";
+             if (source->require_metadata(names[0]).dtype != expected_type)
+@@ -143,7 +152,7 @@ int main(int argc, char ** argv) {
+                     throw std::runtime_error("cache hit read expert payloads again");
+                 if (after.buffer_bytes != cache_bytes) throw std::runtime_error("expert cache grew");
+                 if (core::read_tensor_i32(ids) != route) throw std::runtime_error("routing changed original expert IDs");
+-                std::cout << "pin_experts=" << pin_experts << " request=" << requests++ << " max_abs=" << maximum << " expert_loads=" << after.expert_loads
++                std::cout << "pin_experts=" << pin_experts << " defer_reads=" << defer_reads << " request=" << requests++ << " max_abs=" << maximum << " expert_loads=" << after.expert_loads
+                           << " bytes_read=" << after.bytes_read << " cache_bytes=" << after.buffer_bytes << '\n';
+             }
+             const std::vector<int32_t> grouped_ids{7, 6, 7, 4};
+@@ -164,7 +173,7 @@ int main(int argc, char ** argv) {
+                 throw std::runtime_error("explicit expert staging did not reuse cached slots");
+             const auto other_group = disk.add_group(names, execution.backend(), 4);
+             for (const auto & route : std::vector<std::vector<int32_t>>{{7, 6, 7, 4}, {4, 6, 4, 7}, {7}, {7, 6, 7, 4}}) {
+-                core::DiskExpertWeightStore cold(gguf, pin_experts);
++                core::DiskExpertWeightStore cold(gguf, pin_experts, defer_reads);
+                 const auto cold_group = cold.add_group(names, execution.backend(), 4);
+                 const auto cold_slots = cold.stage(cold_group, route);
+                 for (const auto cached_group : {group, other_group}) {
+@@ -208,6 +217,22 @@ int main(int argc, char ** argv) {
+             catch (const std::runtime_error & e) { rejected = std::string(e.what()).find("routing ID out of range") != std::string::npos; }
+             if (!rejected) throw std::runtime_error("invalid routing IDs were not rejected");
+             source->release_storage();
++#if defined(_WIN32)
++            if (pin_experts && defer_reads) {
++                // No whole-file mapping is retained by the Windows pinned path.
++                core::DiskExpertWeightStore unread(gguf, true, true);
++                unread.add_group(names, execution.backend(), 4);
++                std::filesystem::resize_file(gguf, 0);
++                bool eof_rejected = false;
++                try { unread.load_pinned_experts(); }
++                catch (const std::runtime_error & error) {
++                    eof_rejected = std::string(error.what()).find("failed to read pinned") != std::string::npos;
++                }
++                if (!eof_rejected || unread.statistics().bytes_read != 0)
++                    throw std::runtime_error("incomplete deferred expert input was not rejected");
++                disk.stage(group, {0, 1, 2, 3});
++            }
++#endif
+ #if !defined(_WIN32)
+             // Windows prevents truncating a file while its mapping is open.
+             std::filesystem::resize_file(gguf, 0);

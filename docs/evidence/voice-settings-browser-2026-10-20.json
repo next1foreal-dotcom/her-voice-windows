@@ -1,0 +1,549 @@
+{
+  "artifact_version": 1,
+  "recorded_at_utc": "2026-10-20T20:34:21Z",
+  "result": "PASS",
+  "environment": {
+    "os": "Linux container (not Windows)",
+    "node": "v24.19.0",
+    "chromium": "155.0.8059.84",
+    "aiohttp": "3.14.4",
+    "browser_mode": "Isolated Playwright on loopback; user browser not used",
+    "font": "Noto Sans CJK SC in temporary test fontconfig; no system installation"
+  },
+  "counts": {
+    "browser_scripts_passed": 4,
+    "browser_checkpoints_passed": 26,
+    "node_tests_passed": 33,
+    "unexpected_page_errors": 0
+  },
+  "real_server_setup_command": "python -u -c 'import tempfile; from pathlib import Path; from aiohttp import web; from her_voice.app import create_app; from her_voice.settings import Settings; workspace = tempfile.TemporaryDirectory(prefix=\"her-browser-real-api-\"); settings = Settings(root=Path(workspace.name), demo_only=True, port=18897, engine_port=18898, drama_port=18899); print(\"QA workspace: \" + workspace.name, flush=True); web.run_app(create_app(settings), host=\"127.0.0.1\", port=18897, access_log=None, handler_cancellation=True)'",
+  "server_scope": "Real create_app, VoiceEngine, VoiceStore and demo WebSocket in a fresh temporary workspace; no fake voice API handlers.",
+  "runs": [
+    {
+      "name": "demo_browser",
+      "script": "scripts/browser-check.mjs",
+      "command": "FONTCONFIG_FILE=/tmp/her-voice-ui-fonts/fonts.conf VOICE_CHROMIUM=/workspace/scratch/10fd9451d108/browser-runtime/chrome-headless-shell-linux64/chrome-headless-shell VOICE_QA_URL=http://127.0.0.1:18897 VOICE_QA_OUTPUT=/tmp/her-final-browser-smoke node scripts/browser-check.mjs",
+      "exit_code": 0,
+      "result": {
+        "result": "PASS",
+        "browser": "155.0.8059.84",
+        "checks": [
+          "Demo is explicitly labeled; no microphone/API request",
+          "Typed turn streams PCM/text, and manual interrupt stops it across session reset",
+          "Complete turn returns to listening after scheduled audio ends",
+          "Pause closes session; resume restores complete text history",
+          "Captions toggle, settings dialog, keyboard dismissal",
+          "Automatic Chinese/English mode is visible; English and mixed text survive pause/resume without forced translation",
+          "Clear history also resets backend conversation and disconnects",
+          "390×844, 1366×768, and 320×700 fit without horizontal overflow or clipped header actions"
+        ],
+        "errors": []
+      }
+    },
+    {
+      "name": "native_synthetic_audio",
+      "script": "scripts/browser-audio-check.mjs",
+      "command": "FONTCONFIG_FILE=/tmp/her-voice-ui-fonts/fonts.conf VOICE_CHROMIUM=/workspace/scratch/10fd9451d108/browser-runtime/chrome-headless-shell-linux64/chrome-headless-shell VOICE_QA_OUTPUT=/tmp/her-final-browser-audio node scripts/browser-audio-check.mjs",
+      "exit_code": 0,
+      "result": {
+        "result": "PASS",
+        "browser": "155.0.8059.84",
+        "scope": "Synthetic Chromium microphone and fake Realtime engine; no ASR, TTS, GPU, real microphone, or paid API.",
+        "checks": [
+          "Native getUserMedia + AudioWorklet sends nonzero PCM16: every frame is 1,920 bytes = 40 ms at 24 kHz mono",
+          "Captured synthetic PCM traverses the real WebSocket bridge and starts a native 24 kHz WebAudio source",
+          "Server speech_started stops the live source and sends exactly one scoped cancel; delayed old PCM/text never creates another source",
+          "A new response plays after interruption; immediate response.done waits for the 800 ms native playback to drain",
+          "Stopping releases the real capture track and both WebSocket ends; zero external or provider requests"
+        ],
+        "audioMetrics": {
+          "gum": [
+            {
+              "constraints": {
+                "audio": {
+                  "channelCount": 1,
+                  "echoCancellation": true,
+                  "noiseSuppression": true,
+                  "autoGainControl": true
+                }
+              },
+              "settings": [
+                {
+                  "autoGainControl": true,
+                  "channelCount": 1,
+                  "deviceId": "default",
+                  "echoCancellation": true,
+                  "groupId": "c529df8bde5755851fd9762c261c37bd796b3e45f71bfd1df55ac0315af59640",
+                  "latency": 0.01,
+                  "noiseSuppression": true,
+                  "sampleRate": 48000,
+                  "sampleSize": 16,
+                  "voiceIsolation": false
+                }
+              ]
+            }
+          ],
+          "modules": [
+            "http://127.0.0.1:45259/capture-worklet.js"
+          ],
+          "started": [
+            {
+              "length": 120000,
+              "sampleRate": 24000,
+              "duration": 5,
+              "channels": 1,
+              "peak": 0.06488037109375
+            },
+            {
+              "length": 19200,
+              "sampleRate": 24000,
+              "duration": 0.8,
+              "channels": 1,
+              "peak": 0.00360107421875
+            }
+          ],
+          "stops": [
+            {
+              "at": 1778.699999999255
+            }
+          ],
+          "ended": 2,
+          "active": 0,
+          "trackStates": [
+            "ended"
+          ]
+        },
+        "afterDone": {
+          "state": "speaking",
+          "active": 1
+        },
+        "receivedEvents": [
+          {
+            "type": "session.created"
+          },
+          {
+            "type": "session.updated"
+          },
+          {
+            "type": "input_audio_buffer.speech_started"
+          },
+          {
+            "type": "input_audio_buffer.speech_stopped"
+          },
+          {
+            "type": "conversation.item.input_audio_transcription.completed"
+          },
+          {
+            "type": "response.created",
+            "id": "browser-fixture-old"
+          },
+          {
+            "type": "response.output_audio_transcript.delta",
+            "id": "browser-fixture-old"
+          },
+          {
+            "type": "response.output_audio.delta",
+            "id": "browser-fixture-old"
+          },
+          {
+            "type": "input_audio_buffer.speech_started"
+          },
+          {
+            "type": "response.done",
+            "id": "browser-fixture-old"
+          },
+          {
+            "type": "response.output_audio_transcript.delta",
+            "id": "browser-fixture-old"
+          },
+          {
+            "type": "response.output_audio.delta",
+            "id": "browser-fixture-old"
+          },
+          {
+            "type": "response.done",
+            "id": "browser-fixture-old"
+          },
+          {
+            "type": "input_audio_buffer.speech_started"
+          },
+          {
+            "type": "input_audio_buffer.speech_stopped"
+          },
+          {
+            "type": "conversation.item.input_audio_transcription.completed"
+          },
+          {
+            "type": "response.created",
+            "id": "browser-fixture-new"
+          },
+          {
+            "type": "response.output_audio_transcript.delta",
+            "id": "browser-fixture-new"
+          },
+          {
+            "type": "response.output_audio.delta",
+            "id": "browser-fixture-new"
+          },
+          {
+            "type": "response.done",
+            "id": "browser-fixture-new"
+          }
+        ],
+        "fixture": {
+          "scope": "Synthetic Chromium microphone and fake Realtime engine; no ASR, TTS, GPU, real microphone, or paid API.",
+          "frames": 54,
+          "frame_lengths": {
+            "1920": 54
+          },
+          "invalid_frames": 0,
+          "nonzero_frames": 36,
+          "peak_pcm16": 32386,
+          "cancels": [
+            "browser-fixture-old"
+          ],
+          "session_updates": [
+            {
+              "type": "realtime",
+              "output_modalities": [
+                "audio"
+              ],
+              "audio": {
+                "input": {
+                  "format": {
+                    "type": "audio/pcm",
+                    "rate": 24000
+                  },
+                  "transcription": {
+                    "language": null
+                  },
+                  "turn_detection": {
+                    "type": "server_vad",
+                    "create_response": true,
+                    "interrupt_response": true
+                  }
+                },
+                "output": {
+                  "format": {
+                    "type": "audio/pcm",
+                    "rate": 24000
+                  }
+                }
+              },
+              "extensions": [
+                "speech_to_speech.input_audio_transcription.snapshot"
+              ]
+            }
+          ],
+          "sessions_opened": 1,
+          "sessions_closed": 1,
+          "active_sockets": 0,
+          "provider_requests": 0,
+          "responses_sent": 2,
+          "late_audio_sent": 1,
+          "speech_started_sent": 3,
+          "engine_starts": 0,
+          "engine_stops": 0
+        },
+        "errors": [],
+        "externalRequests": []
+      }
+    },
+    {
+      "name": "voice_ui_failure_fixture",
+      "script": "scripts/browser-voices-check.mjs",
+      "command": "FONTCONFIG_FILE=/tmp/her-voice-ui-fonts/fonts.conf VOICE_CHROMIUM=/workspace/scratch/10fd9451d108/browser-runtime/chrome-headless-shell-linux64/chrome-headless-shell VOICE_QA_OUTPUT=/tmp/her-final-voices-fixture node scripts/browser-voices-check.mjs",
+      "exit_code": 0,
+      "result": {
+        "result": "PASS",
+        "fixture": true,
+        "browser": "155.0.8059.84",
+        "browserPlugin": "Invocation failed: originating browser context unavailable; repository Playwright permitted",
+        "baseUrl": "http://127.0.0.1:33151",
+        "checks": [
+          "Page identity, meaningful screen, Drama default, no selected voice",
+          "Rejected import remains visible, preserves form, adds no fake voice",
+          "Multipart upload, Unicode name/transcript, safe text rendering, explicit selection",
+          "Failed apply preserves confirmed backend; retry applies without auto-start",
+          "Refresh persists selection; 390px/320px forms scroll without horizontal overflow"
+        ],
+        "errors": [],
+        "expectedConsoleErrors": [
+          "Failed to load resource: the server responded with a status of 400 (Bad Request)",
+          "Failed to load resource: the server responded with a status of 409 (Conflict)"
+        ],
+        "output": "/tmp/her-final-voices-fixture"
+      }
+    },
+    {
+      "name": "real_python_voice_api",
+      "script": "scripts/browser-voices-api-check.mjs",
+      "command": "FONTCONFIG_FILE=/tmp/her-voice-ui-fonts/fonts.conf VOICE_CHROMIUM=/workspace/scratch/10fd9451d108/browser-runtime/chrome-headless-shell-linux64/chrome-headless-shell VOICE_QA_URL=http://127.0.0.1:18897 VOICE_QA_OUTPUT=/tmp/her-final-voices-real-api node scripts/browser-voices-api-check.mjs",
+      "exit_code": 0,
+      "result": {
+        "result": "PASS",
+        "real_python_api": true,
+        "browser": "155.0.8059.84",
+        "scope": "Real create_app API, VoiceStore normalization/persistence, frontend and demo WebSocket; synthetic WAV/tone only, no ASR/TTS/GPU/provider calls.",
+        "checks": [
+          "Real Python GET /api/tts and /api/voices expose Drama 3 + Qwen3-TTS Base with an empty voice library",
+          "Actual multipart parser rejects malformed WAV with HTTP 400, keeps the form, and writes no voice",
+          "Actual PCM16 stereo upload is normalized to mono; Unicode text survives; saving a voice does not select it",
+          "Explicit PUT selects Drama 3 and the saved reference voice without loading models or reconnecting",
+          "Applying Qwen3-TTS Base while speaking closes the real demo WebSocket, stops native audio, and retains completed text history",
+          "Actual API rejects an unsupported backend and missing token without changing the saved selection",
+          "A fresh page reload obtains the persisted Qwen3 backend and reference recording from the real server",
+          "Session updates inherit the reference voice; zero engine-start requests, external browser requests, or unexpected page errors"
+        ],
+        "voice": {
+          "id": "8702072a49c24b80a960f6fe175588b8",
+          "name": "Joyboi <中文 English>",
+          "transcript": "你好，我是 Joyboi。Hello, I am Joyboi.",
+          "duration_seconds": 2,
+          "sample_rate": 16000,
+          "channels": 1,
+          "created_at": "2026-10-20T20:34:06.827944+00:00"
+        },
+        "finalConfig": {
+          "backend": "qwen3",
+          "voice_id": "8702072a49c24b80a960f6fe175588b8",
+          "backends": [
+            {
+              "id": "drama3",
+              "label": "Drama 3 · 主用"
+            },
+            {
+              "id": "qwen3",
+              "label": "Qwen3-TTS Base · 备用"
+            }
+          ],
+          "reference_required": true,
+          "reference_ready": true,
+          "error": null,
+          "reference_limits": {
+            "max_bytes": 12582912,
+            "min_seconds": 1,
+            "max_seconds": 30,
+            "format": "PCM16 WAV",
+            "recommended_seconds": "5–15"
+          }
+        },
+        "completedHistoryRows": 2,
+        "audioAfterSwitch": {
+          "started": 29,
+          "stopped": 2,
+          "active": 0
+        },
+        "apiRequests": [
+          {
+            "method": "GET",
+            "path": "/api/bootstrap"
+          },
+          {
+            "method": "GET",
+            "path": "/api/tts"
+          },
+          {
+            "method": "GET",
+            "path": "/api/voices"
+          },
+          {
+            "method": "POST",
+            "path": "/api/voices"
+          },
+          {
+            "method": "POST",
+            "path": "/api/voices"
+          },
+          {
+            "method": "PUT",
+            "path": "/api/tts"
+          },
+          {
+            "method": "GET",
+            "path": "/api/tts"
+          },
+          {
+            "method": "GET",
+            "path": "/api/voices"
+          },
+          {
+            "method": "PUT",
+            "path": "/api/tts"
+          },
+          {
+            "method": "GET",
+            "path": "/api/bootstrap"
+          },
+          {
+            "method": "GET",
+            "path": "/api/tts"
+          },
+          {
+            "method": "GET",
+            "path": "/api/voices"
+          }
+        ],
+        "sessionUpdates": [
+          {
+            "type": "realtime",
+            "output_modalities": [
+              "audio"
+            ],
+            "audio": {
+              "input": {
+                "format": {
+                  "type": "audio/pcm",
+                  "rate": 24000
+                },
+                "transcription": {
+                  "language": null
+                },
+                "turn_detection": {
+                  "type": "server_vad",
+                  "create_response": true,
+                  "interrupt_response": true
+                }
+              },
+              "output": {
+                "format": {
+                  "type": "audio/pcm",
+                  "rate": 24000
+                }
+              }
+            },
+            "extensions": [
+              "speech_to_speech.input_audio_transcription.snapshot"
+            ]
+          },
+          {
+            "type": "realtime",
+            "output_modalities": [
+              "audio"
+            ],
+            "audio": {
+              "input": {
+                "format": {
+                  "type": "audio/pcm",
+                  "rate": 24000
+                },
+                "transcription": {
+                  "language": null
+                },
+                "turn_detection": {
+                  "type": "server_vad",
+                  "create_response": true,
+                  "interrupt_response": true
+                }
+              },
+              "output": {
+                "format": {
+                  "type": "audio/pcm",
+                  "rate": 24000
+                }
+              }
+            },
+            "extensions": [
+              "speech_to_speech.input_audio_transcription.snapshot"
+            ]
+          },
+          {
+            "type": "realtime",
+            "output_modalities": [
+              "audio"
+            ],
+            "audio": {
+              "input": {
+                "format": {
+                  "type": "audio/pcm",
+                  "rate": 24000
+                },
+                "transcription": {
+                  "language": null
+                },
+                "turn_detection": {
+                  "type": "server_vad",
+                  "create_response": true,
+                  "interrupt_response": true
+                }
+              },
+              "output": {
+                "format": {
+                  "type": "audio/pcm",
+                  "rate": 24000
+                }
+              }
+            },
+            "extensions": [
+              "speech_to_speech.input_audio_transcription.snapshot"
+            ]
+          }
+        ],
+        "errors": [],
+        "expectedConsoleErrors": [
+          "Failed to load resource: the server responded with a status of 400 (Bad Request)"
+        ],
+        "externalRequests": [],
+        "output": "/tmp/her-final-voices-real-api"
+      }
+    }
+  ],
+  "node_runs": [
+    {
+      "command": "node tests/protocol.test.mjs",
+      "passed": 12,
+      "failed": 0,
+      "exit_code": 0
+    },
+    {
+      "command": "node tests/client.test.mjs",
+      "passed": 12,
+      "failed": 0,
+      "exit_code": 0
+    },
+    {
+      "command": "node tests/voice-settings.test.mjs",
+      "passed": 9,
+      "failed": 0,
+      "exit_code": 0
+    }
+  ],
+  "changes_verified": [
+    "Saved reference audio is inherited: session.update has no hardcoded Vivian or other voice override.",
+    "Actual multipart upload accepts a two-second PCM16 stereo WAV and returns normalized mono metadata.",
+    "Malformed WAV is rejected with HTTP 400; upload does not implicitly select a voice.",
+    "Drama 3 and Qwen3-TTS Base can explicitly select the same saved reference; active playback and session stop before switching.",
+    "Completed mixed Chinese/English text survives backend change; no automatic model startup or reconnect follows.",
+    "Refresh reads the saved backend and voice; invalid backend and missing token cannot change selection.",
+    "Corrupted saved-selection diagnostics returned by the server surface in the settings panel (Node test)."
+  ],
+  "expected_error_paths": [
+    "HTTP 400 malformed WAV",
+    "HTTP 400 unsupported backend",
+    "HTTP 403 missing token",
+    "HTTP 409 simulated engine-release error (UI fixture only)"
+  ],
+  "harness_adjustments": [
+    "The audio observer confirms successful native stop and AudioContext.closed; queued ended events are not guaranteed after context closure.",
+    "The real API probe accepts aiohttp plain-text authentication rejection in addition to JSON bodies."
+  ],
+  "visual_review": [
+    {
+      "path": "/tmp/her-final-voices-real-api/real-api-qwen-selected.png",
+      "viewport": "1536x1024",
+      "inspected": true
+    },
+    {
+      "path": "/tmp/her-final-voices-fixture/mobile-voice-320.png",
+      "viewport": "320x700",
+      "inspected": true
+    }
+  ],
+  "limits": [
+    "No real Windows microphone/speaker device or Windows GPU driver was available.",
+    "No Drama 3 or Qwen3-TTS weights were loaded, no inference/voice similarity was evaluated, and no VRAM or model latency claim is made.",
+    "No ASR or DeepSeek/cloud provider request was made. Native audio checks use Chromium synthetic microphone input and a local fake speech engine.",
+    "The real API import uses a generated test tone, not an evaluated human voice reference.",
+    "The browser persistence check reloads the page against the same process; independent VoiceStore disk persistence is tested by Python unit tests outside this report."
+  ]
+}

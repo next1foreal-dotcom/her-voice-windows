@@ -1,0 +1,95 @@
+# speech-to-speech 1.0.0, commit 0ed1bb95bd335aa89bb7c172b6a347b6dae596f8.
+# Start the local 8790 gateway before starting this engine: LLM setup performs
+# a provider warmup request. Keep API keys in environment variables only.
+schema_version: 1
+
+blocks:
+  vad:
+    kind: vad
+    backend: silero
+    settings:
+      sample_rate: 16000
+      smart_turn: true
+      smart_turn_model_path: {env: HER_SMART_TURN_MODEL_PATH}
+      smart_turn_cpu_count: 1
+
+  stt:
+    kind: stt
+    backend: faster-whisper
+    settings:
+      # Pinned Systran/faster-whisper-small snapshot staged by the worker.
+      faster_whisper_stt_model_name: {env: HER_ASR_MODEL_PATH}
+      faster_whisper_stt_device: cuda
+      faster_whisper_stt_compute_type: float16
+      # The multilingual checkpoint detects each utterance; never use small.en.
+      faster_whisper_stt_gen_language: auto
+      faster_whisper_stt_gen_beam_size: 1
+
+  llm:
+    kind: llm
+    backend: chat-completions
+    settings:
+      model_name: {env: VOICE_LLM_MODEL}
+      responses_api_base_url: {env: VOICE_GATEWAY_BASE_URL}
+      responses_api_api_key: {env: HER_VOICE_GATEWAY_TOKEN}
+      responses_api_stream: true
+      # Upstream's generic flag emits Qwen-specific chat_template_kwargs.
+      # Our gateway supplies DeepSeek's thinking: {type: disabled} instead.
+      responses_api_disable_thinking: false
+      stream_batch_sentences: 1
+      compact_history: false
+      chat_size: 30
+      # Let the user's request choose the answer language, not an ASR label.
+      enable_lang_prompt: false
+      init_chat_prompt: >-
+        你是一位自然、友善的实时语音助理，支持中文和英文。
+        优先遵从用户明确指定的回答语言；未指定时，使用最近一条用户消息的主要语言回答。
+        中文回答默认使用简体中文，只有用户明确要求繁体时才使用繁体；英文问题以自然英文回答。
+        中英混合消息保留有意义的英文术语、名称及引用，不擅自翻译所有内容，也不逐句重复两种语言。
+        默认先用一到三句说出重点，用户需要时再详细说明。
+        不使用 Markdown、表格、表情符号或朗读代码。
+        不声称看得到用户屏幕或能操作电脑，除非目前确实有相应工具。
+
+  tts:
+    kind: tts
+    backend: qwen3
+    settings:
+      # Base supports the user's reference recording. The controller selects
+      # this block or the native Drama HTTP adapter in a generated profile.
+      qwen3_tts_model_name: {env: HER_TTS_MODEL_PATH}
+      qwen3_tts_backend: torch
+      qwen3_tts_device: cuda
+      qwen3_tts_dtype: float16
+      qwen3_tts_attn_implementation: eager
+      qwen3_tts_speaker: null
+      qwen3_tts_ref_audio: {env: VOICE_REFERENCE_AUDIO}
+      qwen3_tts_ref_text: {env: VOICE_REFERENCE_TEXT}
+      qwen3_tts_xvec_only: false
+      # Keep model-level language adaptation, including mixed-language text.
+      # Client session input.transcription.language must be null, not "auto".
+      qwen3_tts_language: auto
+      qwen3_tts_non_streaming_mode: true
+      qwen3_tts_streaming_chunk_size: 8
+
+pipelines:
+  windows4080:
+    num_pipelines: 1
+    options:
+      enable_live_transcription: true
+      live_transcription_update_interval: 0.5
+      enable_llm_proxy: false
+      # Upstream's detector fixes one language from the first output batch.
+      # Disable it so Qwen receives auto instead of that single-language label.
+      detect_llm_output_language: false
+    stages:
+      vad: vad
+      stt: stt
+      llm: llm
+      tts: tts
+
+runtime:
+  log_level: info
+  log_transcripts: false
+  server:
+    host: 127.0.0.1
+    port: {env: VOICE_ENGINE_PORT}

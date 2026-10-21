@@ -1,0 +1,471 @@
+[
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/STT/faster_whisper_handler.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/STT/faster_whisper_handler.py",
+    "github_blob_sha": "9432b58b5fac212fbae232b2681c822079b5d6cc",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/STT/faster_whisper_handler.py",
+    "sha256": "1191fa689f3819cf3f515838d9f92b23d67b043ea7a89dd7b0e982b2971aded6"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/TTS/qwen3_tts_handler.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/TTS/qwen3_tts_handler.py",
+    "github_blob_sha": "769bf0cdf4cbf5ab9a7846e62b52dfd283c5379d",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/TTS/qwen3_tts_handler.py",
+    "sha256": "fb583acaeb2c0bc54ab50d00a28adb16c315e061dd071bb03fd58d298bfe1c59"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/api/openai_realtime/runtime_config.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/api/openai_realtime/runtime_config.py",
+    "github_blob_sha": "123a9e41f0c1d1113aedd5c2c08af25911cf54f4",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/api/openai_realtime/runtime_config.py",
+    "sha256": "a5a03cd24435a242c1c77107e94c6db7bd7f63ae70b12a89e7da41e304b27c27"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/api/openai_realtime/handlers/session.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/api/openai_realtime/handlers/session.py",
+    "github_blob_sha": "67b4d65fab209b25b2639c176653bd5918ba07b0",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/api/openai_realtime/handlers/session.py",
+    "sha256": "e8fe23105354276fb115550d3954e5b7108480ddb22b2b89da62003d648bb713"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/LLM/lm_output_processor.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/LLM/lm_output_processor.py",
+    "github_blob_sha": "3aa0a4ba50bd6d17d6ffd9b8dd245d6ed6f5a154",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/LLM/lm_output_processor.py",
+    "sha256": "548688c16310ff9c2866e3723a6ca701b5839785e3227a00aadc02fc0f985c7d"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/LLM/utils.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/LLM/utils.py",
+    "github_blob_sha": "20fe5d14a5e982922a7dc76f9dedfd062a063934",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/LLM/utils.py",
+    "sha256": "23159aa9539974feb02261c1decefa929b43d3f0294ca0f97347af08cfea4d11"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/LLM/voice_prompt.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/LLM/voice_prompt.py",
+    "github_blob_sha": "73579eee002a13c54c0d48d59a4ee8883583ff85",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/LLM/voice_prompt.py",
+    "sha256": "c257a6a4f5ed8a1adce5b0304a788e62feb0ed519b35a82fb2c37abf44f069d7"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/pipeline/language_detection.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/pipeline/language_detection.py",
+    "github_blob_sha": "ccd736bc324920b9cf141a46583861c3d60cfa64",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/pipeline/language_detection.py",
+    "sha256": "caa982e26e6fb7b95dfe210a8f948ba058b06465c93f9189be30fa39dda589ae"
+  },
+  {
+    "path": "sources/faster-qwen3-tts/faster_qwen3_tts/model.py",
+    "repository": "andimarafioti/faster-qwen3-tts",
+    "commit": "1094aabd83b367b1b29942769141b0524bed245d",
+    "original_path": "faster_qwen3_tts/model.py",
+    "github_blob_sha": "5c00e36aee8757e2d6cbbdfbaf2613cadb5f8520",
+    "source": "https://github.com/andimarafioti/faster-qwen3-tts/blob/1094aabd83b367b1b29942769141b0524bed245d/faster_qwen3_tts/model.py",
+    "sha256": "7d45740b805bb1a4798fbe20ffd580e2a35361e744c4645da106c2b6383d4de2"
+  },
+  {
+    "path": "sources/openai-python/src/openai/types/realtime/audio_transcription.py",
+    "repository": "openai/openai-python",
+    "commit": "fc7f598efa70c6bef5ad15d1a8c9dfcd0fbd33fa",
+    "original_path": "src/openai/types/realtime/audio_transcription.py",
+    "github_blob_sha": "0a8c1371e0155ec810df5b99fed8e79e195df653",
+    "source": "https://github.com/openai/openai-python/blob/fc7f598efa70c6bef5ad15d1a8c9dfcd0fbd33fa/src/openai/types/realtime/audio_transcription.py",
+    "release": "v2.28.0",
+    "sha256": "134c78236f648ef55b24ebec8cd3125103fc888a1fa1db168f0b8675b3f29cde"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/LLM/chat.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/LLM/chat.py",
+    "github_blob_sha": "0ab334e73a88e0f13c39f0ab0034304b21869bf9",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/LLM/chat.py",
+    "sha256": "5e7e03dac5615ec3aa0929aa15eb974cae131984cb1c4ba32a67a178a1616cbf"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/utils/utils.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/utils/utils.py",
+    "github_blob_sha": "9515a6a88588a5637e6e3b9367bb5580b7786a27",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/utils/utils.py",
+    "sha256": "f4d9e0cdeb42aaa14a80fbc01d61042e8cc31e762a54230912a035f122c37da4"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/_config_yaml.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/_config_yaml.py",
+    "github_blob_sha": "bf3c399c57f228d372a407076c62c4e1c77fe3a3",
+    "sha256": "be3c7aefbd5417831ffed52eec1d98ef002a383778bea3748e4d06a42ef8293f",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/_config_yaml.py"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/__init__.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/__init__.py",
+    "github_blob_sha": "5745ba52d9f0ca04a9b01534de2d5dbf0500dbad",
+    "sha256": "be06c5554e392f720ed23cefd20723665a0adfea6107a171ff98d4e384e0a270",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/__init__.py"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/config.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/config.py",
+    "github_blob_sha": "c161e845a240663e8d9e7312bbf5323059e1baaf",
+    "sha256": "cb92fe06edc8a065a2dfb0f11e766a35b60598c41f8d1aa74f198a4fa9247f36",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/config.py"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/backend_registry.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/backend_registry.py",
+    "github_blob_sha": "b51f6dfb3ee15a778647b865f5a608c4c8015d1e",
+    "sha256": "59fd881b3dafb3a204db98eaef1820d309dab7d809432baf95d7f7f02d62cfe7",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/backend_registry.py"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/pipeline/cancel_scope.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/pipeline/cancel_scope.py",
+    "github_blob_sha": "d731ac1fc671fb445ce496b155ce903dd86438bf",
+    "sha256": "efa7726b1a44d51acb5b32a3ff1f153a5e5622d80fb2a60eda88b9b009ba377d",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/pipeline/cancel_scope.py"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/pipeline/speculative_turns.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/pipeline/speculative_turns.py",
+    "github_blob_sha": "9d24afff6300579d95cb7862d7253df3558aec14",
+    "sha256": "0a6b46fcc9662998cf65050c6419bea7bcc368f5e91bccc940c4adecc91329d9",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/pipeline/speculative_turns.py"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/arguments_classes/orukeet_stt_arguments.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/arguments_classes/orukeet_stt_arguments.py",
+    "github_blob_sha": "73724454556ca465cfa3508d9b157628cd61a39a",
+    "sha256": "b73750bffae1681aa7d60cbb8644145655435a4a8ccf2959d8cc701f5d4fe3f5",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/arguments_classes/orukeet_stt_arguments.py"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/arguments_classes/omnivoice_tts_arguments.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/arguments_classes/omnivoice_tts_arguments.py",
+    "github_blob_sha": "27becb6ab5ad6a3a6062375f899c4aeb2d8f3954",
+    "sha256": "af76be5e34a7943e17da62f6c74df2c185382858e795b99e1594e66fbb94ee8d",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/arguments_classes/omnivoice_tts_arguments.py"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/arguments_classes/chat_tts_arguments.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/arguments_classes/chat_tts_arguments.py",
+    "github_blob_sha": "0f93a3b90817fc050012c90a9d45d91e93a285df",
+    "sha256": "eab543386f0c169078bbdf8edb90da5f3054f76160fbc22068b15200996290d2",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/arguments_classes/chat_tts_arguments.py"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/arguments_classes/responses_api_language_model_arguments.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/arguments_classes/responses_api_language_model_arguments.py",
+    "github_blob_sha": "0d4a41adef5e307f3ab7fd0f755e98a288c2e247",
+    "sha256": "b5059be183f06aa5e199fe112f157842f8f135f2d6d4bb7710d7c0ef23fb127d",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/arguments_classes/responses_api_language_model_arguments.py"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/arguments_classes/minimax_tts_arguments.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/arguments_classes/minimax_tts_arguments.py",
+    "github_blob_sha": "5294ebe00ad067d5aa9261e162fa7dc76e30125b",
+    "sha256": "ae70dda3bb13749129b9cd1737641e77911df9762c2ea90958574f1197e5fdfc",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/arguments_classes/minimax_tts_arguments.py"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/arguments_classes/w2v_stv_arguments.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/arguments_classes/w2v_stv_arguments.py",
+    "github_blob_sha": "fd63ca1c49c3322dba568cae878b4ed685252d61",
+    "sha256": "98f7fe65b966ec69d0746fa519ab8bac88cf4803ebe2642bfbe5cec14a74f149",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/arguments_classes/w2v_stv_arguments.py"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/arguments_classes/qwen3_asr_stt_arguments.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/arguments_classes/qwen3_asr_stt_arguments.py",
+    "github_blob_sha": "5fbe66e60511f6f40c64431c4f6194e47d1dd5c5",
+    "sha256": "b9e457bac4f7bb15d817ed40a39997bb9577dd586421a74eae0c7bff33ff62be",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/arguments_classes/qwen3_asr_stt_arguments.py"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/arguments_classes/module_arguments.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/arguments_classes/module_arguments.py",
+    "github_blob_sha": "81c5c4128a8fc837d7ef66992a08c4bbecee9ebd",
+    "sha256": "12a2669ed43d877259ee7b4749a511f80939bb37aa48207a199fa7244f44ce9d",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/arguments_classes/module_arguments.py"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/arguments_classes/drama3_tts_arguments.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/arguments_classes/drama3_tts_arguments.py",
+    "github_blob_sha": "d8efb85cecdca83661729f849a92cb0266290734",
+    "sha256": "a62792ed869425a871554ccd0db1dfe883e151811d36dd54da6381c951bf4a21",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/arguments_classes/drama3_tts_arguments.py"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/arguments_classes/local_audio_arguments.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/arguments_classes/local_audio_arguments.py",
+    "github_blob_sha": "3463b1bf3b94188ceb552753ab05c8770c6f4fa1",
+    "sha256": "64a612507650856451761b4c70184168f6b25caa9e3f0e4843d977a98012ab09",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/arguments_classes/local_audio_arguments.py"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/arguments_classes/parakeet_tdt_arguments.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/arguments_classes/parakeet_tdt_arguments.py",
+    "github_blob_sha": "50b52d28021c22da8df96682f7e9b933a2caae9e",
+    "sha256": "3dcef47094e17ffae44b22d48f90d9231ee72ddf0a63de0a692101bb36cc8b38",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/arguments_classes/parakeet_tdt_arguments.py"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/arguments_classes/kitten_tts_arguments.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/arguments_classes/kitten_tts_arguments.py",
+    "github_blob_sha": "3cf443a555a918c4292c5245a2d3ffe9c14e5244",
+    "sha256": "1b206595f47516500eec7f9bbdff50978b3690dadc042302f854ceb5f65e19c4",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/arguments_classes/kitten_tts_arguments.py"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/arguments_classes/supertonic_tts_arguments.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/arguments_classes/supertonic_tts_arguments.py",
+    "github_blob_sha": "11694b953f94feaba0dd5be4508c4fd3a1e625d5",
+    "sha256": "1cbb07d4a1f5afcd826078dc31b096b082637e7f2cf39fb43d334fc72a26ea2f",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/arguments_classes/supertonic_tts_arguments.py"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/arguments_classes/chat_completions_language_model_arguments.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/arguments_classes/chat_completions_language_model_arguments.py",
+    "github_blob_sha": "f1a891ce7fde2f8f9593043d36dab1bcd9b952d3",
+    "sha256": "c44ff88e17dcdbd08f5fdad6a024841a801663528c1c4231e54d1e1116952a54",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/arguments_classes/chat_completions_language_model_arguments.py"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/arguments_classes/qwen3_tts_arguments.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/arguments_classes/qwen3_tts_arguments.py",
+    "github_blob_sha": "f86cbcf14e0e969a5e65959d354a901867fa28a9",
+    "sha256": "7a38bdc2b9cf3f0014ee815fbf7315b53bda4d02db5735642bfc7d63da753b97",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/arguments_classes/qwen3_tts_arguments.py"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/arguments_classes/nemotron_streaming_stt_arguments.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/arguments_classes/nemotron_streaming_stt_arguments.py",
+    "github_blob_sha": "7fc530b8d4cdf584e2d7bf3dbde60f82872febea",
+    "sha256": "60002be748881c6d1be3754be3b3fd5dba69ba5ed8177ec579b1aa5b5e016507",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/arguments_classes/nemotron_streaming_stt_arguments.py"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/arguments_classes/openai_stt_arguments.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/arguments_classes/openai_stt_arguments.py",
+    "github_blob_sha": "90719b6974071731f3940aa657b90ebf8562b597",
+    "sha256": "c7edf67858c4ca65aa74c522253cfe23ab25fcce0e438eb891593df286778cf9",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/arguments_classes/openai_stt_arguments.py"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/arguments_classes/language_model_base_arguments.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/arguments_classes/language_model_base_arguments.py",
+    "github_blob_sha": "dfe90f65fa400f2fabaedf479f22f482d2272db6",
+    "sha256": "f04f556f729c0d297b3387ee8814810bd9fe16deec82b631b25cf1e255509dd8",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/arguments_classes/language_model_base_arguments.py"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/arguments_classes/openai_tts_arguments.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/arguments_classes/openai_tts_arguments.py",
+    "github_blob_sha": "c1f518eb2625bc6c48d23e0c4e685cff314f3343",
+    "sha256": "5287c72459ba6580f5187520b7908111b6751bc923212bbe35992ce1b1c06d20",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/arguments_classes/openai_tts_arguments.py"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/arguments_classes/vad_arguments.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/arguments_classes/vad_arguments.py",
+    "github_blob_sha": "3fe6588301950e994ab980884fffaecaa7b07cce",
+    "sha256": "bcf3be052904fe39cc311d5b35615545bb2d4ed0fd658cd900f055871beea7b2",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/arguments_classes/vad_arguments.py"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/arguments_classes/vllm_realtime_stt_arguments.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/arguments_classes/vllm_realtime_stt_arguments.py",
+    "github_blob_sha": "a5b8242b4bd754e7fe794d4bd936b564229cfd3e",
+    "sha256": "e7116b250e3cd8617587886aebea58d28073cc3f362f03704a31559afd67c746",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/arguments_classes/vllm_realtime_stt_arguments.py"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/arguments_classes/openai_realtime_stt_arguments.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/arguments_classes/openai_realtime_stt_arguments.py",
+    "github_blob_sha": "f833389047d6c8a14826410853387811f93558ce",
+    "sha256": "ab35491e202996c00f337cb7e7dfe98a9c4bd4b4903ce16d4db750385ad9da71",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/arguments_classes/openai_realtime_stt_arguments.py"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/arguments_classes/sense_voice_stt_arguments.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/arguments_classes/sense_voice_stt_arguments.py",
+    "github_blob_sha": "d3c33782a97c6185503217f6999fec7ad618fd95",
+    "sha256": "4f9beb9c45af85d7f2ba1b33349219e827303f9bb66061059100821df580ca30",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/arguments_classes/sense_voice_stt_arguments.py"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/arguments_classes/language_model_arguments.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/arguments_classes/language_model_arguments.py",
+    "github_blob_sha": "73db82f4dfc1b6bfd3579161e9e06d6e19881caf",
+    "sha256": "74bf36f1613fe09e67f57f5113bd40bf7ecdfa1d6927f0c126d5d2b2e77cb51e",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/arguments_classes/language_model_arguments.py"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/arguments_classes/paraformer_stt_arguments.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/arguments_classes/paraformer_stt_arguments.py",
+    "github_blob_sha": "327440441312bd5e9af8f1a0e73568af2c7ecdd7",
+    "sha256": "8b0ecff26921501f20914e6184b84fd24e1d9e9f60a1b1c9cc0fc561d27ef62e",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/arguments_classes/paraformer_stt_arguments.py"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/arguments_classes/parakeet_unified_stt_arguments.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/arguments_classes/parakeet_unified_stt_arguments.py",
+    "github_blob_sha": "df3f450ea7d11078b3c7423e207d5a0c2d33ad46",
+    "sha256": "517b588897e177f24369d567b844fc74205020c42a28b93de68d635f7b9d8f5a",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/arguments_classes/parakeet_unified_stt_arguments.py"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/arguments_classes/__init__.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/arguments_classes/__init__.py",
+    "github_blob_sha": "8b137891791fe96927ad78e64b0aad7bded08bdc",
+    "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/arguments_classes/__init__.py"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/arguments_classes/kokoro_tts_arguments.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/arguments_classes/kokoro_tts_arguments.py",
+    "github_blob_sha": "9221f7595a6b72d018b82b1bc30fb8b3ea64c4b3",
+    "sha256": "35afa483fd70ca651f2e9a3cf3c8c7b5756a6c6c13560f44ef6f9ccf399b8e49",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/arguments_classes/kokoro_tts_arguments.py"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/arguments_classes/whisper_stt_arguments.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/arguments_classes/whisper_stt_arguments.py",
+    "github_blob_sha": "dcb200634198fb541815641acf9e48ee68295d79",
+    "sha256": "bb063b97fd1d4cb79adc25db11479f592a66f46249a88e175b5560b83581d258",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/arguments_classes/whisper_stt_arguments.py"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/arguments_classes/realtime_server_arguments.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/arguments_classes/realtime_server_arguments.py",
+    "github_blob_sha": "1c9d27a30acd35521fa7a084a79cbcd2ca762578",
+    "sha256": "ba257881aff04307471ee2af59d24d5513742e7c93b31c9a54e383c3812184e4",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/arguments_classes/realtime_server_arguments.py"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/arguments_classes/mlx_audio_whisper_arguments.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/arguments_classes/mlx_audio_whisper_arguments.py",
+    "github_blob_sha": "e26c3e2b4c8355d6546843e18aafdb22aba1b73d",
+    "sha256": "986da17d71cc48c7dcd7a497214a6e1b3cddcaab9f15576d02eaba4f8e8f7757",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/arguments_classes/mlx_audio_whisper_arguments.py"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/arguments_classes/facebookmms_tts_arguments.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/arguments_classes/facebookmms_tts_arguments.py",
+    "github_blob_sha": "f14dfeb808ec3f444fbebd7410b19fb583a79de7",
+    "sha256": "53c3a37bccda004df1abef938669b48eba39d99e90a51e1926548ca111a8fd2b",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/arguments_classes/facebookmms_tts_arguments.py"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/arguments_classes/pocket_tts_arguments.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/arguments_classes/pocket_tts_arguments.py",
+    "github_blob_sha": "94bcdd248e3d0778fdb23c571d9cd740d5d6f39d",
+    "sha256": "e8536562812acb04670781f1026682d09598d937423edc03715a24b9942b1da2",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/arguments_classes/pocket_tts_arguments.py"
+  },
+  {
+    "path": "sources/speech-to-speech/src/speech_to_speech/arguments_classes/faster_whisper_stt_arguments.py",
+    "repository": "huggingface/speech-to-speech",
+    "commit": "0ed1bb95bd335aa89bb7c172b6a347b6dae596f8",
+    "original_path": "src/speech_to_speech/arguments_classes/faster_whisper_stt_arguments.py",
+    "github_blob_sha": "38465b9ebe1f12c5c08e34cb817377a3ac82b1aa",
+    "sha256": "74d382f5590e817d81a5f28d8a9c24c958f91543b033d37167205d6876a5506a",
+    "source": "https://github.com/huggingface/speech-to-speech/blob/0ed1bb95bd335aa89bb7c172b6a347b6dae596f8/src/speech_to_speech/arguments_classes/faster_whisper_stt_arguments.py"
+  }
+]

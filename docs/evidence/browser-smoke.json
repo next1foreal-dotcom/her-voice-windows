@@ -1,0 +1,15 @@
+{
+  "result": "PASS",
+  "browser": "155.0.8059.84",
+  "checks": [
+    "Demo is explicitly labeled; no microphone/API request",
+    "Typed turn streams PCM/text, and manual interrupt stops it across session reset",
+    "Complete turn returns to listening after scheduled audio ends",
+    "Pause closes session; resume restores complete text history",
+    "Captions toggle, settings dialog, keyboard dismissal",
+    "Automatic Chinese/English mode is visible; English and mixed text survive pause/resume without forced translation",
+    "Clear history also resets backend conversation and disconnects",
+    "390×844, 1366×768, and 320×700 fit without horizontal overflow or clipped header actions"
+  ],
+  "errors": []
+}
