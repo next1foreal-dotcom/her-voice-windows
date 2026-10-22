@@ -133,6 +133,62 @@ class SentenceStreamingTests(unittest.TestCase):
         handler.cancelled = True
         self.assertEqual(list(stream), [])
 
+    def test_first_segment_timing_is_once_and_never_logs_text(self):
+        marker = 'PRIVATE_TRANSCRIPT_MUST_NOT_BE_LOGGED'
+        closed = []
+        def upstream(handler, events, state, turn):
+            try:
+                yield SimpleNamespace(text='')  # control/tool chunk
+                yield SimpleNamespace(text=marker)
+                yield SimpleNamespace(text='second')
+            finally:
+                closed.append(True)
+        tracker = SimpleNamespace(llm_ttft_s=0.2)
+        handler = SimpleNamespace(turn_latency_store=SimpleNamespace(get_response=lambda key: tracker))
+        turn = SimpleNamespace(wants_audio=True, response_key='response-1', turn_id='turn-1', turn_revision=2)
+        with self.assertLogs('her_voice.sentence_stream', level='INFO') as logs:
+            output = list(first_clause_stream(upstream)(handler, [], SimpleNamespace(), turn))
+        self.assertEqual(len(logs.output), 1)
+        self.assertNotIn(marker, logs.output[0])
+        self.assertIn('provider_ttft_s=0.2', logs.output[0])
+        self.assertIn('response_key=response-1', logs.output[0])
+        self.assertEqual(output[1].text, marker)
+        self.assertEqual(closed, [True])
+
+    def test_first_text_and_segment_use_the_same_monotonic_clock(self):
+        class TextDelta:
+            def __init__(self, text): self.text = text
+        def upstream(handler, events, state, turn):
+            text = ''.join(event.text for event in events)
+            yield SimpleNamespace(text=text)
+        turn = SimpleNamespace(wants_audio=True, response_key='r', turn_id='t', turn_revision=0)
+        events = iter([TextDelta(' '), TextDelta('First'), TextDelta(' sentence.')])
+        with patch('her_voice.sentence_stream.perf_counter_ns', side_effect=[100, 200, 1200200]), patch('her_voice.sentence_stream._LOG') as logger:
+            output = list(first_clause_stream(upstream, TextDelta)(Handler(), events, SimpleNamespace(), turn))
+        args = logger.info.call_args.args
+        self.assertEqual(args[4], 1200200)
+        self.assertEqual(args[6], 200)
+        self.assertEqual(args[7], 1.2)
+        self.assertEqual(output[0].text, ' First sentence.')
+
+    def test_text_only_has_no_speech_timing_and_close_releases_context(self):
+        closed = []
+        def upstream(handler, events, state, turn):
+            try:
+                yield SimpleNamespace(text='first')
+                yield SimpleNamespace(text='second')
+            finally:
+                closed.append(True)
+        turn = SimpleNamespace(wants_audio=False, response_key='r', turn_id='t', turn_revision=0)
+        with patch('her_voice.sentence_stream._LOG') as logger:
+            stream = first_clause_stream(upstream)(Handler(), [], SimpleNamespace(), turn)
+            next(stream)
+            stream.close()
+            logger.info.assert_not_called()
+        self.assertEqual(closed, [True])
+        from her_voice.sentence_stream import _TURN
+        self.assertIsNone(_TURN.get())
+
     def test_unknown_source_is_refused_without_modifying_binding(self):
         module = SimpleNamespace(__file__=__file__, sent_tokenize=sent_tokenize)
         with patch("her_voice.sentence_stream.import_module", return_value=module):

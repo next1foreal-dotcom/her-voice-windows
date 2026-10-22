@@ -22,11 +22,7 @@ const ui = createUI({
   onInterrupt: () => run(() => client.interrupt()),
   onSend: text => run(() => client.sendText(text)),
   onModeChange: mode => run(() => client.setMode(mode)),
-  onSettingsChange: settings => run(async () => {
-    await client.updateSettings(settings);
-    try { localStorage.setItem('her-voice-settings', JSON.stringify(client.state.settings)); }
-    catch { /* Preferences remain in memory when storage is unavailable. */ }
-  }),
+  onSettingsChange: settings => run(() => client.updateSettings(settings)),
   onClearHistory: () => run(() => client.clearHistory()),
   onLoadVoiceSettings: () => { void providerPanel?.load(); return run(() => client.loadVoiceSettings()); },
   onImportVoice: voice => run(() => client.importVoice(voice)),
@@ -53,7 +49,17 @@ function render() {
   if (disposed || frame !== null) return;
   frame = requestAnimationFrame(() => { frame = null; if (!disposed) ui.render(latest); });
 }
-const unsubscribeState = client.subscribe(snapshot => { latest = snapshot; render(); });
+let persistedSettings = JSON.stringify(saved);
+const unsubscribeState = client.subscribe(snapshot => {
+  latest = snapshot;
+  // Persist automatic device recovery as well as explicit settings edits.
+  const settings = JSON.stringify(snapshot.settings);
+  if (settings !== persistedSettings) {
+    try { localStorage.setItem('her-voice-settings', settings); persistedSettings = settings; }
+    catch { /* Preferences remain in memory when storage is unavailable. */ }
+  }
+  render();
+});
 const unsubscribeLevels = client.onLevels(({input, output}) => ui.setLevels(input, output));
 const events = new AbortController();
 window.addEventListener('pagehide', event => {

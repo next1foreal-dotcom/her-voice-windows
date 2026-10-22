@@ -153,6 +153,32 @@ class DramaRuntimeTests(unittest.TestCase):
         self.assertEqual(server.build_command()[0], str(self.executable))
         self.assertIn("--no-ui", server.build_command())
 
+    def test_verified_codes_replace_audio_once_and_warm_same_reference(self):
+        from test_drama_voice import save_cache
+        transcript = "你好，这是我的声音。 Hello, this is my voice."
+        save_cache(self.voice, transcript=transcript)
+        server = self.server()
+        self.prepare(server)
+        preset = json.loads(server.config_path.read_text())["models"][0]["voice_presets"]["voice_123"]
+        self.assertNotIn("voice_ref", preset)  # Adding both would duplicate the reference.
+        self.assertEqual(preset["options"]["top_k"], 30)
+        server._state = "ready"
+        class Response:
+            status = 200
+            def __enter__(self): return self
+            def __exit__(self, *args): pass
+            def read(self, *args): return b'{"artifacts":[{"kind":"acoustic_tokens","payload":"e30="}]}'
+        def open_request(request, **kwargs):
+            body = json.loads(request.data)["request"]
+            self.assertNotIn("voice_ref", body)
+            self.assertTrue(body["options"]["encode_reference_only"])
+            refs = json.loads(body["options"]["multi_reference_cond"])
+            self.assertEqual(len(refs), 1)
+            self.assertEqual(refs[0]["text"], transcript)
+            self.assertEqual(len(refs[0]["vq_codes"][0]), 22)
+            return Response()
+        with patch.object(server._http, "open", side_effect=open_request):
+            server.prepare_reference()
     def test_cold_load_progress_is_measured_and_stale_progress_is_cleared(self):
         server = self.server()
         self.prepare(server)

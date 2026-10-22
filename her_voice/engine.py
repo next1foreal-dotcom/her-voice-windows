@@ -380,6 +380,7 @@ def _worker_main() -> None:
     """Stage pinned weights, retain Windows DLL handles, then run upstream CLI."""
     if sys.argv[1:2] != ["--worker"]:
         raise SystemExit("This module is started by the local gateway.")
+    worker_started = time.perf_counter()
     handles = []
     if os.name == "nt" and hasattr(os, "add_dll_directory"):
         for folder in cuda_dll_directories(dict(os.environ), sys.executable):
@@ -401,13 +402,21 @@ def _worker_main() -> None:
         if backend == "drama3":
             from her_voice.drama_resampler import install_drama_resampler
             install_drama_resampler()
+            print(f"HER_STARTUP phase=tts_import_ready elapsed_s={time.perf_counter() - worker_started:.3f}", flush=True)
             from her_voice.drama_warmup import install_drama_warmup
             install_drama_warmup(backend=backend)
+            from her_voice.drama_voice import install_drama_voice
+            install_drama_voice(backend=backend)
+            from her_voice.drama_language import install_drama_language_path
+            install_drama_language_path(backend=backend)
+            print(f"HER_STARTUP phase=language_hook_ready elapsed_s={time.perf_counter() - worker_started:.3f}", flush=True)
         from her_voice.sentence_stream import install_sentence_streaming
         install_sentence_streaming()
         from her_voice.latency import install_latency_metadata
         install_latency_metadata()
+        print(f"HER_STARTUP phase=compatibility_ready elapsed_s={time.perf_counter() - worker_started:.3f}", flush=True)
         os.environ.update(ensure_models(tts_backend=backend))
+        print(f"HER_STARTUP phase=model_paths_ready elapsed_s={time.perf_counter() - worker_started:.3f}", flush=True)
         runpy.run_module("speech_to_speech.cli", run_name="__main__")
     finally:
         for handle in handles:

@@ -13,8 +13,8 @@ function decodeBase64(value) {
 }
 
 export class VoiceAudio {
-  constructor({onFrame, onLevel, onStart, onIdle, onError, onSchedule}) {
-    Object.assign(this, {onFrame, onLevel, onStart, onIdle, onError, onSchedule});
+  constructor({onFrame, onLevel, onStart, onIdle, onError, onSchedule, onOutputFallback}) {
+    Object.assign(this, {onFrame, onLevel, onStart, onIdle, onError, onSchedule, onOutputFallback});
     this.context = null;
     this.stream = null;
     this.pendingStream = null;
@@ -28,6 +28,7 @@ export class VoiceAudio {
     this.capturePaused = false;
     this.started = new Set();
     this.captureEpoch = 0;
+    this.outputEpoch = 0;
   }
 
   async open(outputDeviceId = '') {
@@ -35,20 +36,29 @@ export class VoiceAudio {
     const context = this.context;
     await context.resume();
     if (context !== this.context || context.state === 'closed') return false;
-    if (outputDeviceId) {
-      if (typeof context.setSinkId !== 'function') throw new Error('這個瀏覽器不支援指定輸出裝置，請使用系統預設輸出。');
-      await context.setSinkId(outputDeviceId);
-    }
+    if (outputDeviceId) await this.setOutput(outputDeviceId);
     return context === this.context && context.state !== 'closed';
   }
 
   async setOutput(deviceId) {
-    if (!this.context) return;
-    if (typeof this.context.setSinkId !== 'function') {
+    const ticket = ++this.outputEpoch;
+    const context = this.context;
+    if (!context || context.state === 'closed') return;
+    if (typeof context.setSinkId !== 'function') {
       if (deviceId) throw new Error('這個瀏覽器不支援指定輸出裝置，請使用 Windows 預設輸出。');
       return;
     }
-    await this.context.setSinkId(deviceId || '');
+    try { await context.setSinkId(deviceId || ''); }
+    catch (error) {
+      if (ticket !== this.outputEpoch || context !== this.context || context.state === 'closed') return;
+      // Browser device IDs can expire or disappear after unplugging a speaker.
+      // Recover only a missing selected sink; permission and default failures matter.
+      if (!deviceId || error.name !== 'NotFoundError') throw error;
+      await context.setSinkId('');
+      if (ticket === this.outputEpoch && context === this.context && context.state !== 'closed') {
+        this.onOutputFallback?.({requestedDeviceId: deviceId, deviceId: ''});
+      }
+    }
   }
 
   async capture(deviceId = '') {

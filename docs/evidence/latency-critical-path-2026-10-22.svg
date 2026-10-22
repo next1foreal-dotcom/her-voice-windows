@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="810" viewBox="0 0 1400 810">
+<title>HER Voice 同一回合關鍵路徑：500ms 目標與 2551ms 後端首音</title>
+<desc>相對時間源於後端估計語音終點。停頓判定完成132ms，辨識完成219ms，可朗讀片段約942ms，TTS開始約943ms，後端首音2551ms。麥克風真實終點與實際揚聲器輸出未測。</desc>
+<rect width="1400" height="810" fill="#0c1419"/>
+<g font-family="Microsoft JhengHei,Microsoft YaHei,Arial,sans-serif" fill="#e9f0f3">
+<text x="46" y="58" font-size="29" font-weight="700">HER Voice · 同一回合的首音關鍵路徑</text>
+<text x="46" y="92" font-size="17" fill="#a6b9c4">turn_3 rev=0 · 原始日誌重建 · 2026-10-22 · 所有時間相對後端估計停語</text>
+<rect x="46" y="115" width="1308" height="56" rx="9" fill="#18252d"/>
+<text x="65" y="150" font-size="19">可朗讀文字 ≈ 942ms　→　後端首音 2551ms　→　實際聽到：未測</text>
+<g stroke="#263844" stroke-width="1">
+<path d="M260 216V620 M580 216V620 M740 216V620 M900 216V620 M1060 216V620"/>
+<path d="M260 217H1130"/>
+</g>
+<path d="M420 207V620" stroke="#ffbe66" stroke-width="2" stroke-dasharray="7 6"/>
+<g fill="#a6b9c4" font-size="15" text-anchor="middle">
+<text x="260" y="200">0</text><text x="580" y="200">1000</text><text x="740" y="200">1500</text><text x="900" y="200">2000</text><text x="1060" y="200">2500ms</text>
+</g>
+<text x="420" y="195" font-size="16" fill="#ffbe66" text-anchor="middle">500ms 目標</text>
+<g font-size="18">
+<text x="48" y="264">麥克風真正停語</text>
+<text x="48" y="332">停頓與判定</text>
+<text x="48" y="400">最終辨識</text>
+<text x="48" y="468">LLM 到可朗讀片段</text>
+<text x="48" y="536">首段 TTS</text>
+<text x="48" y="604">傳輸與實際出聲</text>
+</g>
+<text x="274" y="264" font-size="17" fill="#a6b9c4">未保存可對齊的麥克風原始波形；0ms 是後端估計終點</text>
+<rect x="260" y="309" width="42.24" height="28" rx="4" fill="#71a9bf"/>
+<text x="316" y="330" font-size="16">0 → 132ms（97ms soft-end）</text>
+<rect x="302.24" y="377" width="27.84" height="28" rx="4" fill="#7dbeaa"/>
+<text x="344" y="399" font-size="16">132 → 219ms；先前 ASR 已有重疊工作</text>
+<rect x="330.08" y="445" width="231.36" height="28" rx="4" fill="#a599d3"/>
+<text x="578" y="465" font-size="16">219 → ≈942ms；SSE 首文字與分句等待未拆開</text>
+<rect x="561.76" y="513" width="514.56" height="28" rx="4" fill="#d79778"/>
+<text x="575" y="534" font-size="16" fill="#171b20">≈943 → 2551ms · 首段合成約 1608ms</text>
+<circle cx="1076.32" cy="527" r="6" fill="#fff3dd"/>
+<text x="1090" y="533" font-size="16">後端首音</text>
+<path d="M1076 583H1307" stroke="#a6b9c4" stroke-width="2" stroke-dasharray="7 6"/>
+<text x="274" y="604" font-size="17" fill="#a6b9c4">同輪 WebSocket 到達、AudioContext 與聲學首音未記錄</text>
+<rect x="46" y="650" width="1308" height="113" rx="9" fill="#18252d"/>
+<text x="65" y="681" font-size="18" fill="#ffcf91">獨立本機對照：暖機 TTS 首 PCM 中位 1564ms（n=6），6/6 超過 500ms。</text>
+<text x="65" y="714" font-size="16" fill="#b4c5ce">此對照不是上圖同輪數據，不拼接成完整對話；預填充 1429ms 包含專家 upload 789ms。</text>
+<text x="65" y="743" font-size="16" fill="#b4c5ce">歷史回合：n=4，中位 3170ms，範圍 2550–7080ms。物理語音到語音：n=0，未驗證。</text>
+<text x="48" y="791" font-size="14" fill="#8199a7">證據：engine-original.log L30058–30082 · latency-budget-2026-10-22.md · 秒級瓶頸不能由數十毫秒播放調整解決</text>
+</g></svg>

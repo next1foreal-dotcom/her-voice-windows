@@ -230,3 +230,68 @@ test('resampling retains prior outputs and handles empty input at fractional bou
   assert.deepEqual([...first], [0.5, 0], 'a subsequent quantum must not overwrite emitted samples');
   assert.deepEqual([...converter.push(new Float32Array())], []);
 });
+test('opening a saved missing output falls back to the default without blocking connection', async () => {
+  const changes = [], sinks = [];
+  const audio = new VoiceAudio({onOutputFallback: detail => changes.push(detail)});
+  audio.context = new FakeContext();
+  audio.context.setSinkId = async id => {
+    sinks.push(id);
+    if (id) throw Object.assign(new Error('AudioContext.setSinkId(): the device is not found.'), {name: 'NotFoundError'});
+  };
+  assert.equal(await audio.open('removed-speaker'), true);
+  assert.deepEqual(sinks, ['removed-speaker', '']);
+  assert.deepEqual(changes, [{requestedDeviceId: 'removed-speaker', deviceId: ''}]);
+  await audio.close();
+});
+
+test('output switching also recovers missing devices but preserves permission errors', async () => {
+  const changes = [], sinks = [];
+  const audio = new VoiceAudio({onOutputFallback: detail => changes.push(detail)});
+  audio.context = new FakeContext();
+  audio.context.setSinkId = async id => {
+    sinks.push(id);
+    if (id === 'missing') throw Object.assign(new Error('missing'), {name: 'NotFoundError'});
+    if (id === 'denied') throw Object.assign(new Error('denied'), {name: 'NotAllowedError'});
+  };
+  await audio.setOutput('valid');
+  await audio.setOutput('missing');
+  await assert.rejects(audio.setOutput('denied'), {name: 'NotAllowedError'});
+  assert.deepEqual(sinks, ['valid', 'missing', '', 'denied']);
+  assert.deepEqual(changes, [{requestedDeviceId: 'missing', deviceId: ''}]);
+  await audio.close();
+});
+
+test('a failed default output is reported and a stale output failure cannot change a new session', async () => {
+  let rejectSink;
+  const changes = [];
+  const audio = new VoiceAudio({onOutputFallback: detail => changes.push(detail)});
+  audio.context = new FakeContext();
+  audio.context.setSinkId = async () => { throw Object.assign(new Error('default missing'), {name: 'NotFoundError'}); };
+  await assert.rejects(audio.setOutput(''), /default missing/);
+  const oldContext = audio.context;
+  oldContext.setSinkId = () => new Promise((_, reject) => { rejectSink = reject; });
+  const pending = audio.setOutput('missing');
+  await audio.close();
+  audio.context = new FakeContext();
+  rejectSink(Object.assign(new Error('removed'), {name: 'NotFoundError'}));
+  await pending;
+  assert.deepEqual(changes, []);
+  await audio.close();
+});
+test('late failure of an old output selection cannot reset a newer selected speaker', async () => {
+  const sinks = [], changes = [];
+  let rejectOld;
+  const audio = new VoiceAudio({onOutputFallback: detail => changes.push(detail)});
+  audio.context = new FakeContext();
+  audio.context.setSinkId = async id => {
+    sinks.push(id);
+    if (id === 'old') await new Promise((_, reject) => { rejectOld = reject; });
+  };
+  const old = audio.setOutput('old');
+  await audio.setOutput('new');
+  rejectOld(Object.assign(new Error('old removed'), {name: 'NotFoundError'}));
+  await old;
+  assert.deepEqual(sinks, ['old', 'new']);
+  assert.deepEqual(changes, []);
+  await audio.close();
+});

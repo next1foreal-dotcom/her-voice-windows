@@ -1,0 +1,126 @@
+diff --git a/include/engine/community_models/fish_drama3/backbone.h b/include/engine/community_models/fish_drama3/backbone.h
+index d5f1090..cc4989c 100644
+--- a/include/engine/community_models/fish_drama3/backbone.h
++++ b/include/engine/community_models/fish_drama3/backbone.h
+@@ -2,6 +2,7 @@
+ 
+ #include "engine/framework/assets/tensor_source.h"
+ #include "engine/framework/core/execution_context.h"
++#include "engine/framework/core/disk_expert_weight_store.h"
+ 
+ #include <cstddef>
+ #include <cstdint>
+@@ -74,6 +75,7 @@ public:
+     std::vector<float> lm_head(const std::vector<float> & hidden);
+     void release_prefill_graphs();
+     void release_graphs();
++    core::DiskExpertWeightStore::Statistics expert_statistics() const noexcept;
+ 
+     class DecodeSession {
+     public:
+diff --git a/src/community_models/fish_drama3/backbone.cpp b/src/community_models/fish_drama3/backbone.cpp
+index 5935a6c..6e5ad80 100644
+--- a/src/community_models/fish_drama3/backbone.cpp
++++ b/src/community_models/fish_drama3/backbone.cpp
+@@ -1409,7 +1409,7 @@ public:
+         std::vector<std::vector<int32_t>> by_expert(static_cast<size_t>(config_.experts));
+         const auto rows = expert_rows * config_.expert_cache_size;
+         std::vector<int32_t> source(static_cast<size_t>(rows)), target(static_cast<size_t>(rows));
+-        double attention_ms = 0, expert_ms = 0;
++        double attention_ms = 0, expert_ms = 0, stage_ms = 0, compute_ms = 0, finish_ms = 0;
+         uint64_t expert_work_rows = 0;
+         for (size_t layer = 0; layer < weights_.layers.size(); ++layer) {
+             auto started = std::chrono::steady_clock::now();
+@@ -1434,7 +1434,9 @@ public:
+             for (size_t start = 0; start < experts.size(); start += static_cast<size_t>(config_.expert_cache_size)) {
+                 const auto end = std::min(experts.size(), start + static_cast<size_t>(config_.expert_cache_size));
+                 const std::vector<int32_t> group(experts.begin() + start, experts.begin() + end);
++                const auto stage_started = std::chrono::steady_clock::now();
+                 const auto mapped = weights.disk_store->stage(weights.disk_group, group);
++                stage_ms += debug::elapsed_ms(stage_started);
+                 size_t maximum = 0;
+                 for (const auto expert : group)
+                     maximum = std::max(maximum, by_expert[expert].size());
+@@ -1454,12 +1456,16 @@ public:
+                     }
+                     ggml_backend_tensor_set(source_rows_, source.data(), 0, work_rows * sizeof(int32_t));
+                     ggml_backend_tensor_set(target_rows_, target.data(), 0, work_rows * sizeof(int32_t));
++                    const auto compute_started = std::chrono::steady_clock::now();
+                     compute(expert_graphs_[layer]);
++                    compute_ms += debug::elapsed_ms(compute_started);
+                     expert_work_rows += work_rows;
+                     begin += block_rows;
+                 }
+             }
++            const auto finish_started = std::chrono::steady_clock::now();
+             compute(finish_);
++            finish_ms += debug::elapsed_ms(finish_started);
+             expert_ms += debug::elapsed_ms(started);
+         }
+         compute(final_);
+@@ -1469,6 +1475,10 @@ public:
+         ggml_backend_tensor_get(hidden_, result.hidden.data(), 0, result.hidden.size() * sizeof(float));
+         debug::timing_log_scalar("drama3.offload_prefill_attention_ms", attention_ms);
+         debug::timing_log_scalar("drama3.offload_prefill_experts_ms", expert_ms);
++        debug::timing_log_scalar("drama3.offload_prefill_stage_ms", stage_ms);
++        debug::timing_log_scalar("drama3.offload_prefill_compute_ms", compute_ms);
++        debug::timing_log_scalar("drama3.offload_prefill_finish_ms", finish_ms);
++        debug::timing_log_scalar("drama3.offload_prefill_other_ms", expert_ms - stage_ms - compute_ms - finish_ms);
+         debug::timing_log_scalar("drama3.offload_prefill_expert_work_rows", expert_work_rows);
+         debug::timing_log_scalar("drama3.offload_prefill_routed_rows", steps * k * config_.layers);
+         return result;
+@@ -1935,6 +1945,10 @@ public:
+         decode_graph_.release_prefill_graphs();
+     }
+ 
++    core::DiskExpertWeightStore::Statistics expert_statistics() const noexcept {
++        return weights_->disk_store ? weights_->disk_store->statistics() : core::DiskExpertWeightStore::Statistics{};
++    }
++
+ private:
+     Drama3BackboneDecoderConfig config_;
+     std::shared_ptr<Drama3BackboneWeights> weights_;
+@@ -1986,6 +2000,10 @@ Drama3BackboneDecoderRuntime::Drama3BackboneDecoderRuntime(
+ 
+ Drama3BackboneDecoderRuntime::~Drama3BackboneDecoderRuntime() = default;
+ 
++core::DiskExpertWeightStore::Statistics Drama3BackboneDecoderRuntime::expert_statistics() const noexcept {
++    return impl_->expert_statistics();
++}
++
+ std::vector<float> Drama3BackboneDecoderRuntime::token_embedding(const std::vector<int32_t> & token_ids) {
+     return impl_->token_embedding(token_ids);
+ }
+diff --git a/src/community_models/fish_drama3/generator.cpp b/src/community_models/fish_drama3/generator.cpp
+index 35c0229..3f8999d 100644
+--- a/src/community_models/fish_drama3/generator.cpp
++++ b/src/community_models/fish_drama3/generator.cpp
+@@ -158,6 +158,7 @@ Drama3Generation Drama3Generator::generate(const std::string & text, const std::
+         !std::isfinite(sampling.top_p) || sampling.top_p <= 0 || sampling.top_p > 1 ||
+         sampling.top_k <= 0 || sampling.max_frames <= 0) throw runtime::InvalidRequestError("invalid Drama 3 sampling parameters");
+     using ProfileClock = std::chrono::steady_clock;
++    const auto experts_before = backbone_->expert_statistics();
+     std::array<double, 9> component_ms{};
+     auto component_started = ProfileClock::now();
+     const auto profile_start = profile_first_audio_ ? ProfileClock::now() : ProfileClock::time_point{};
+@@ -210,6 +211,7 @@ Drama3Generation Drama3Generator::generate(const std::string & text, const std::
+         prefill = decoder->prefill_embeddings(embeddings, static_cast<int64_t>(prompt.size()));
+     }
+     debug::trace_log_scalar("drama3.prefill_reused_rows", prefix_rows);
++    const auto experts_after_prefill = backbone_->expert_statistics();
+     mark_phase("backbone_prefill_ms");
+     component_ms[2] += debug::elapsed_ms(component_started);
+     component_started = ProfileClock::now();
+@@ -323,6 +325,12 @@ Drama3Generation Drama3Generator::generate(const std::string & text, const std::
+         "drama3.backbone_step_ms", "drama3.codec_ms"};
+     for (size_t i = 0; i < component_ms.size(); ++i) debug::timing_log_scalar(component_keys[i], component_ms[i]);
+     debug::timing_log_scalar("drama3.generated_frames", output_frames.size());
++    const auto experts_after = backbone_->expert_statistics();
++    debug::timing_log_scalar("drama3.prefill_upload_ms", experts_after_prefill.upload_ms - experts_before.upload_ms);
++    debug::timing_log_scalar("drama3.decode_upload_ms", experts_after.upload_ms - experts_after_prefill.upload_ms);
++    debug::timing_log_scalar("drama3.decode_stage_ms", experts_after.stage_ms - experts_after_prefill.stage_ms);
++    debug::timing_log_scalar("drama3.decode_expert_loads", experts_after.expert_loads - experts_after_prefill.expert_loads);
++    debug::timing_log_scalar("drama3.decode_expert_hits", experts_after.cache_hits - experts_after_prefill.cache_hits);
+     if (result.reached_limit) std::cerr << "[fish_drama3] max_tokens reached; audio may be incomplete\n";
+     return result;
+ }

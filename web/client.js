@@ -94,6 +94,11 @@ export class VoiceClient {
         if (actualOnset || previousState !== this._model.snapshot.state) this._emit();
       },
       onSchedule: detail => this._timing.scheduled(detail),
+      onOutputFallback: ({requestedDeviceId, deviceId}) => {
+        if (this._destroyed || this._model.snapshot.settings.outputDeviceId !== requestedDeviceId) return;
+        this._model.snapshot.settings.outputDeviceId = deviceId;
+        this._emit();
+      },
       onIdle: () => { if (!this._destroyed) { this._model.audioIdle(); this._emit(); } },
       onError: error => {
         if (this._destroyed) return;
@@ -101,7 +106,14 @@ export class VoiceClient {
         this._disconnect(false).catch(failure => this._report(failure));
       },
     });
-    this._deviceChange = () => { this._refreshDevices().then(() => this._emit()).catch(error => this._report(error)); };
+    this._deviceChange = () => {
+      this._refreshDevices().then(async () => {
+        if (this._destroyed) return;
+        const output = this._model.snapshot.settings.outputDeviceId;
+        if (output) await this._audio.setOutput(output);
+        this._emit();
+      }).catch(error => this._report(error));
+    };
     this._mediaDevices?.addEventListener?.('devicechange', this._deviceChange);
   }
 

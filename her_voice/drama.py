@@ -192,7 +192,14 @@ class DramaSupervisor(EngineSupervisor):
             model["lazy"] = False
             self._loaded_host_mb = 0.0
             model["path"] = str(model_path)
-            model["voice_presets"] = {voice_id: {"voice_ref": str(reference), "reference_text": reference_text.strip()}}
+            from .drama_reference import reference_options
+            try:
+                cached = reference_options(reference, reference_text, voice_id)
+            except ValueError as exc:
+                raise EngineError(str(exc)) from exc
+            preset = ({"options": cached} if cached is not None else
+                      {"voice_ref": str(reference), "reference_text": reference_text.strip()})
+            model["voice_presets"] = {voice_id: preset}
             model["default_voice_preset"] = voice_id
             options = model.setdefault("session_options", {})
             if not isinstance(options, dict):
@@ -237,10 +244,13 @@ class DramaSupervisor(EngineSupervisor):
                 raise EngineError("Drama server must be ready before preparing its reference.")
             config = _read_json(self.config_path)
             preset = config["models"][0]["voice_presets"][self._voice_id]
-        payload = {"model": MODEL_ID, "request": {
-            "text": "Hello.", "voice_ref": preset["voice_ref"],
-            "options": {"reference_text": preset["reference_text"], "encode_reference_only": True},
-        }}
+        cached = preset.get("options", {})
+        if "multi_reference_cond" in cached:
+            request_body = {"text": "Hello.", "options": {**cached, "encode_reference_only": True}}
+        else:
+            request_body = {"text": "Hello.", "voice_ref": preset["voice_ref"],
+                            "options": {"reference_text": preset["reference_text"], "encode_reference_only": True}}
+        payload = {"model": MODEL_ID, "request": request_body}
         request = urllib.request.Request(
             f"http://127.0.0.1:{self.port}/v1/tasks/run",
             data=json.dumps(payload).encode("utf-8"), headers={"Content-Type": "application/json"},

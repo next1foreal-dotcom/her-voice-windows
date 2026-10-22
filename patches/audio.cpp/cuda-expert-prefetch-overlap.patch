@@ -1,0 +1,289 @@
+diff --git a/src/framework/core/disk_expert_weight_store.cpp b/src/framework/core/disk_expert_weight_store.cpp
+index 3649b40..96c18bf 100644
+--- a/src/framework/core/disk_expert_weight_store.cpp
++++ b/src/framework/core/disk_expert_weight_store.cpp
+@@ -67,6 +67,94 @@ public:
+         std::byte * data() { return buffer ? static_cast<std::byte *>(ggml_backend_buffer_get_base(buffer)) : bytes.data(); }
+     };
+ 
++    struct Prefetch {
++        std::unique_ptr<ggml_context, ContextDeleter> context;
++        ggml_backend_t backend = nullptr;
++        ggml_backend_buffer_t buffer = nullptr;
++        std::vector<ggml_tensor *> tensors;
++        std::vector<int32_t> ids;
++        size_t group_index = 0;
++        bool pending = false;
++        ~Prefetch() {
++            if (backend) ggml_backend_synchronize(backend);
++            if (buffer) ggml_backend_buffer_free(buffer);
++            if (backend) ggml_backend_free(backend);
++        }
++    };
++
++    void discard_prefetch() {
++        if (prefetched && prefetched->pending) {
++            ggml_backend_synchronize(prefetched->backend);
++            prefetched->pending = false;
++            prefetched->ids.clear();
++        }
++    }
++
++    void prefetch(size_t index, const std::vector<int32_t> & ids) {
++#if defined(GGML_USE_CUDA) && !defined(GGML_USE_HIP) && !defined(GGML_USE_MUSA)
++        auto & group = *groups.at(index);
++        if (!pin_experts || !ggml_backend_is_cuda(group.backend) || ids.empty()) return;
++        load_pinned_experts();
++        const std::unordered_set<int32_t> required(ids.begin(), ids.end());
++        if (required.size() > group.expert_ids.size())
++            throw std::runtime_error("prefetched experts exceed disk expert cache capacity");
++        for (const auto id : required)
++            if (id < 0 || id >= group.projections.front().experts)
++                throw std::runtime_error("prefetched expert routing ID out of range");
++        discard_prefetch();
++        bool compatible = prefetched && prefetched->tensors.size() == group.tensors.size() &&
++            ggml_backend_get_device(prefetched->backend) == ggml_backend_get_device(group.backend);
++        for (size_t p = 0; compatible && p < group.tensors.size(); ++p)
++            compatible = prefetched->tensors[p]->type == group.tensors[p]->type &&
++                std::memcmp(prefetched->tensors[p]->ne, group.tensors[p]->ne, sizeof(group.tensors[p]->ne)) == 0 &&
++                std::memcmp(prefetched->tensors[p]->nb, group.tensors[p]->nb, sizeof(group.tensors[p]->nb)) == 0;
++        if (!compatible) {
++            auto next = std::make_unique<Prefetch>();
++            next->backend = ggml_backend_dev_init(ggml_backend_get_device(group.backend), nullptr);
++            if (!next->backend) return;
++            next->context.reset(ggml_init({group.tensors.size() * ggml_tensor_overhead() + 1024, nullptr, true}));
++            if (!next->context) return;
++            for (const auto * tensor : group.tensors) next->tensors.push_back(ggml_dup_tensor(next->context.get(), tensor));
++            next->buffer = ggml_backend_alloc_ctx_tensors(next->context.get(), next->backend);
++            if (!next->buffer) return;
++            prefetched = std::move(next);
++            debug::timing_log_scalar("disk_experts.prefetch_buffer_mb",
++                double(ggml_backend_buffer_get_size(prefetched->buffer)) / (1024 * 1024));
++        }
++        auto & next = *prefetched;
++        // Predict only scratch layout; do not mutate placement, clocks or hit counts.
++        // The later stage() still runs the original planner and verifies every miss.
++        next.ids.assign(group.expert_ids.size(), -1);
++        auto planned_ids = group.expert_ids;
++        for (const auto id : required) {
++            if (std::find(planned_ids.begin(), planned_ids.end(), id) != planned_ids.end()) continue;
++            size_t slot = planned_ids.size();
++            for (size_t candidate = 0; candidate < planned_ids.size(); ++candidate) {
++                if (required.count(planned_ids[candidate])) continue;
++                if (slot == planned_ids.size() || group.last_used[candidate] < group.last_used[slot]) slot = candidate;
++            }
++            planned_ids[slot] = id;
++            next.ids[slot] = id;
++        }
++        next.group_index = index;
++        next.pending = true; // Destructor/invalidation must drain even a partially submitted upload.
++        for (size_t p = 0; p < group.projections.size(); ++p) {
++            const auto & projection = group.projections[p];
++            for (size_t row = 0; row < next.ids.size();) {
++                if (next.ids[row] < 0) { ++row; continue; }
++                size_t end = row + 1;
++                while (end < next.ids.size() && next.ids[end] == next.ids[end - 1] + 1) ++end;
++                ggml_backend_tensor_set_async(next.backend, next.tensors[p],
++                    projection.host_data + static_cast<size_t>(next.ids[row]) * projection.expert_bytes,
++                    row * projection.expert_bytes, (end - row) * projection.expert_bytes);
++                row = end;
++            }
++        }
++#else
++        (void) index;
++        (void) ids;
++#endif
++    }
+     Impl(const std::filesystem::path & path, bool pin, bool defer)
+         : file(path, std::ios::binary), source_path(path), defer_pinned_reads(defer), pin_experts(pin) {
+         if (!file) throw std::runtime_error("cannot open disk expert GGUF: " + path.string());
+@@ -196,7 +284,15 @@ public:
+             if (file.tellg() < static_cast<std::streamoff>(mapped_file.size()))
+                 throw std::runtime_error("failed to read selected expert: GGUF was truncated");
+         }
+-        size_t offset = 0;
++        const bool use_prefetch = prefetched && prefetched->pending && prefetched->group_index == index &&
++            std::all_of(misses.begin(), misses.end(), [&](const Miss & miss) {
++                return miss.slot < prefetched->ids.size() && prefetched->ids[miss.slot] == miss.id;
++            });
++        if (prefetched && prefetched->pending) {
++            const auto wait_started = std::chrono::steady_clock::now();
++            ggml_backend_synchronize(prefetched->backend);
++            stats.upload_ms += debug::elapsed_ms(wait_started);
++        }        size_t offset = 0;
+         // Projection ranges in staging do not overlap. Post each upload before
+         // reading the next projection, then wait before reusing any range.
+         for (size_t p = 0; p < group.projections.size(); ++p) {
+@@ -212,7 +308,21 @@ public:
+             }
+             stats.read_ms += debug::elapsed_ms(started);
+             started = std::chrono::steady_clock::now();
+-            for (size_t begin = 0; begin < misses.size();) {
++            if (use_prefetch) {
++                for (size_t begin = 0; begin < misses.size();) {
++                    size_t end = begin + 1;
++                    while (end < misses.size() && misses[end].slot == misses[end - 1].slot + 1) ++end;
++                    // Aligned scratch lets contiguous physical slots share one exact byte copy.
++                    auto source = *prefetched->tensors[p];
++                    auto destination = *group.tensors[p];
++                    source.ne[2] = destination.ne[2] = static_cast<int64_t>(end - begin);
++                    source.nb[3] = destination.nb[3] = bytes * (end - begin);
++                    source.data = static_cast<std::byte *>(source.data) + misses[begin].slot * bytes;
++                    destination.data = static_cast<std::byte *>(destination.data) + misses[begin].slot * bytes;
++                    ggml_backend_tensor_copy_async(prefetched->backend, prefetched->backend, &source, &destination);
++                    begin = end;
++                }
++            } else            for (size_t begin = 0; begin < misses.size();) {
+                 size_t end = begin + 1;
+                 while (end < misses.size() && misses[end].slot == misses[end - 1].slot + 1 &&
+                     (!pin_experts || misses[end].id == misses[end - 1].id + 1)) ++end;
+@@ -226,7 +336,9 @@ public:
+             offset += misses.size() * bytes;
+         }
+         const auto started = std::chrono::steady_clock::now();
+-        if (!misses.empty()) ggml_backend_synchronize(group.backend);
++        if (use_prefetch) ggml_backend_synchronize(prefetched->backend);
++        else if (!misses.empty()) ggml_backend_synchronize(group.backend);
++        if (prefetched) { prefetched->pending = false; prefetched->ids.clear(); }
+         stats.upload_ms += debug::elapsed_ms(started);
+         for (const auto & miss : misses) group.expert_ids[miss.slot] = miss.id;
+         stats.expert_loads += misses.size();
+@@ -250,6 +362,7 @@ public:
+     std::map<ggml_backend_t, std::unique_ptr<Staging>> host_staging;
+     uint64_t clock = 0;
+     Statistics stats;
++    std::unique_ptr<Prefetch> prefetched;
+ };
+ 
+ DiskExpertWeightStore::DiskExpertWeightStore(const std::filesystem::path & path, bool pin_experts, bool defer_pinned_reads)
+@@ -367,7 +480,12 @@ std::vector<int32_t> DiskExpertWeightStore::stage(size_t group, const std::vecto
+     return impl_->stage(expert_ids, group);
+ }
+ 
++void DiskExpertWeightStore::prefetch(size_t group, const std::vector<int32_t> & expert_ids) {
++    impl_->prefetch(group, expert_ids);
++}
++
+ void DiskExpertWeightStore::invalidate_cache() {
++    impl_->discard_prefetch();
+     for (auto & group : impl_->groups) {
+         std::fill(group->expert_ids.begin(), group->expert_ids.end(), -1);
+         std::fill(group->last_used.begin(), group->last_used.end(), 0);
+diff --git a/include/engine/framework/core/disk_expert_weight_store.h b/include/engine/framework/core/disk_expert_weight_store.h
+index 3b4323f..56fe60e 100644
+--- a/include/engine/framework/core/disk_expert_weight_store.h
++++ b/include/engine/framework/core/disk_expert_weight_store.h
+@@ -42,6 +42,9 @@ public:
+     TensorValue tensor(size_t group, size_t projection) const;
+     // Stage one bounded group and return cache-slot IDs in the caller's order.
+     std::vector<int32_t> stage(size_t group, const std::vector<int32_t> & expert_ids);
++    // Opportunistically copy next pinned CUDA group into bounded device scratch without changing placement.
++    // stage() consumes it only for matching expert IDs; invalidation/destruction drains pending work.
++    void prefetch(size_t group, const std::vector<int32_t> & expert_ids);
+     // Invalidate placement at an independent request boundary, retaining all allocations and statistics.
+     void invalidate_cache();
+     ggml_tensor * route(ModuleBuildContext & ctx, ggml_tensor * expert_ids, size_t group) const;
+diff --git a/src/community_models/fish_drama3/backbone.cpp b/src/community_models/fish_drama3/backbone.cpp
+index 6e5ad80..9523097 100644
+--- a/src/community_models/fish_drama3/backbone.cpp
++++ b/src/community_models/fish_drama3/backbone.cpp
+@@ -1,3 +1,5 @@
++#include <fstream>
++#include <cstdlib>
+ #include "engine/community_models/fish_drama3/backbone.h"
+ 
+ #include "engine/framework/core/backend.h"
+@@ -1410,6 +1412,14 @@ public:
+         const auto rows = expert_rows * config_.expert_cache_size;
+         std::vector<int32_t> source(static_cast<size_t>(rows)), target(static_cast<size_t>(rows));
+         double attention_ms = 0, expert_ms = 0, stage_ms = 0, compute_ms = 0, finish_ms = 0;
++        // Private same-process A/B gate. With no file configured, native transfer overlap is enabled.
++        bool prefetch_enabled = true;
++        if (const auto * control = std::getenv("HER_DRAMA_PREFETCH_CONTROL_FILE")) {
++            std::ifstream input(control);
++            char value = '0';
++            input >> value;
++            prefetch_enabled = value == '1';
++        }
+         uint64_t expert_work_rows = 0;
+         for (size_t layer = 0; layer < weights_.layers.size(); ++layer) {
+             auto started = std::chrono::steady_clock::now();
+@@ -1437,6 +1447,7 @@ public:
+                 const auto stage_started = std::chrono::steady_clock::now();
+                 const auto mapped = weights.disk_store->stage(weights.disk_group, group);
+                 stage_ms += debug::elapsed_ms(stage_started);
++
+                 size_t maximum = 0;
+                 for (const auto expert : group)
+                     maximum = std::max(maximum, by_expert[expert].size());
+@@ -1456,7 +1467,12 @@ public:
+                     }
+                     ggml_backend_tensor_set(source_rows_, source.data(), 0, work_rows * sizeof(int32_t));
+                     ggml_backend_tensor_set(target_rows_, target.data(), 0, work_rows * sizeof(int32_t));
+-                    const auto compute_started = std::chrono::steady_clock::now();
++                    // Queue small routing inputs first: a prior large H2D transfer could otherwise delay them.
++                    if (prefetch_enabled && begin == 0 && end < experts.size()) {
++                        const auto next_end = std::min(experts.size(), end + static_cast<size_t>(config_.expert_cache_size));
++                        weights.disk_store->prefetch(weights.disk_group,
++                            std::vector<int32_t>(experts.begin() + end, experts.begin() + next_end));
++                    }                    const auto compute_started = std::chrono::steady_clock::now();
+                     compute(expert_graphs_[layer]);
+                     compute_ms += debug::elapsed_ms(compute_started);
+                     expert_work_rows += work_rows;
+diff --git a/tests/unittests/test_disk_expert_weight_store.cpp b/tests/unittests/test_disk_expert_weight_store.cpp
+index 6977d82..f84021e 100644
+--- a/tests/unittests/test_disk_expert_weight_store.cpp
++++ b/tests/unittests/test_disk_expert_weight_store.cpp
+@@ -204,7 +204,51 @@ int main(int argc, char ** argv) {
+                     disk.statistics().expert_loads != loads)
+                     throw std::runtime_error("expert staging did not reuse within-request slots");
+             }
+-            bool capacity_rejected = false;
++            // Identical LRU planning and complete native projection bytes with async scratch.
++            core::DiskExpertWeightStore serial(gguf, pin_experts, defer_reads);
++            const auto serial_group = serial.add_group(names, execution.backend(), 4);
++            disk.invalidate_cache();
++            const std::vector<std::vector<int32_t>> overlap_routes{
++                {0, 1, 2, 3}, {4, 5, 6, 7}, {8, 9, 8, 11}, {7, 2, 7, 1},
++                {7, 2, 7, 1}, {0}, {11, 3, 4, 10}, {0, 1, 2, 3}};
++            for (int repetition = 0; repetition < 8; ++repetition) {
++                for (size_t i = 0; i < overlap_routes.size(); ++i) {
++                    const auto & route = overlap_routes[i];
++                    const auto expected_slots = serial.stage(serial_group, route);
++                    const auto actual_slots = disk.stage(group, route);
++                    if (expected_slots != actual_slots) throw std::runtime_error("prefetch changed LRU slot mapping");
++                    if (i + 1 < overlap_routes.size()) disk.prefetch(group, overlap_routes[i + 1]);
++                    for (size_t p = 0; p < full.size(); ++p) {
++                        const auto bytes = full[p].tensor->nb[2];
++                        std::vector<std::byte> actual_bytes(bytes * 4), reference_bytes(bytes * 4);
++                        ggml_backend_tensor_get(disk.tensor(group, p).tensor, actual_bytes.data(), 0, actual_bytes.size());
++                        ggml_backend_tensor_get(serial.tensor(serial_group, p).tensor, reference_bytes.data(), 0, reference_bytes.size());
++                        if (actual_bytes != reference_bytes) throw std::runtime_error("prefetch changed staged native bytes or current weights");
++                    }
++                }
++            }
++            disk.prefetch(group, {4, 5, 6, 7});
++            disk.invalidate_cache();
++            serial.invalidate_cache();
++            if (disk.stage(group, {0, 1, 2, 3}) != serial.stage(serial_group, {0, 1, 2, 3}))
++                throw std::runtime_error("prefetch invalidation changed slot mapping");
++            disk.prefetch(group, {4, 5, 6, 7});
++            const auto mismatch_slots = disk.stage(group, {8, 9, 10, 11});
++            if (mismatch_slots != serial.stage(serial_group, {8, 9, 10, 11}))
++                throw std::runtime_error("prefetch mismatch changed slot mapping");
++            for (size_t p = 0; p < full.size(); ++p) {
++                std::vector<std::byte> actual_bytes(ggml_nbytes(disk.tensor(group, p).tensor));
++                std::vector<std::byte> reference_bytes(actual_bytes.size());
++                ggml_backend_tensor_get(disk.tensor(group, p).tensor, actual_bytes.data(), 0, actual_bytes.size());
++                ggml_backend_tensor_get(serial.tensor(serial_group, p).tensor, reference_bytes.data(), 0, reference_bytes.size());
++                if (actual_bytes != reference_bytes) throw std::runtime_error("prefetch mismatch used stale scratch bytes");
++            }
++            {
++                core::DiskExpertWeightStore abandoned(gguf, pin_experts, defer_reads);
++                const auto abandoned_group = abandoned.add_group(names, execution.backend(), 4);
++                abandoned.prefetch(abandoned_group, {0, 1, 2, 3});
++            }
++            std::cout << "prefetch_exact_routes=64 mismatch_invalidate_destructor=passed pin=" << pin_experts << '\n';            bool capacity_rejected = false;
+             try { disk.stage(group, {0, 1, 2, 3, 4}); }
+             catch (const std::runtime_error & error) {
+                 capacity_rejected = std::string(error.what()).find("cache capacity") != std::string::npos;

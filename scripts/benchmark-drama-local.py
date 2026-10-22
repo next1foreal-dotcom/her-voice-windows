@@ -8,6 +8,41 @@ import time
 import urllib.request
 
 
+
+def stream_metrics(chunks, *, bytes_per_second=88200, startup_lead_s=0.035):
+    """Replay observed arrivals; transport-read boundaries are not model frames.
+
+    This estimates PCM supply at the native endpoint, not browser playback or
+    acoustic latency. Required lead excludes the initial first-byte wait.
+    """
+    if not chunks:
+        raise ValueError("Expected at least one PCM chunk")
+    first = chunks[0][0]
+    next_time = first + startup_lead_s
+    supplied = 0.0
+    gaps = []
+    required = 0.0
+    max_queue = 0.0
+    previous = first
+    for index, (arrived, size) in enumerate(chunks):
+        if arrived < previous or size <= 0:
+            raise ValueError("Invalid PCM arrival sequence")
+        required = max(required, arrived - first - supplied)
+        when = next_time if next_time > arrived else arrived + startup_lead_s
+        if index and when > next_time:
+            gaps.append(when - next_time)
+        duration = size / bytes_per_second
+        next_time = when + duration
+        supplied += duration
+        max_queue = max(max_queue, next_time - arrived)
+        previous = arrived
+    tail_audio = supplied - chunks[0][1] / bytes_per_second
+    return {"chunks": len(chunks), "startup_lead_s": startup_lead_s,
+            "required_lead_s": max(0.0, required), "estimated_gap_count": len(gaps),
+            "estimated_gap_s": sum(gaps), "estimated_max_gap_s": max(gaps, default=0.0),
+            "max_queued_audio_s": max_queue,
+            "post_first_chunk_rtf": (chunks[-1][0] - first) / tail_audio if tail_audio > 0 else None,
+            "measurement": "native HTTP arrival replay; not actual browser or speaker timing"}
 def measure(base, voice, text, *, reference_prefix_cache=None):
     payload = {"model": "drama-3", "voice": voice, "input": text,
                "response_format": "pcm", "stream_format": "audio", "seed": 0}
@@ -20,6 +55,7 @@ def measure(base, voice, text, *, reference_prefix_cache=None):
     digest = hashlib.sha256()
     total = 0
     peak_gap = 0.0
+    arrivals = []
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
     with opener.open(request, timeout=120) as response:
         if response.headers.get_content_type() not in {"audio/pcm", "application/octet-stream"}:
@@ -32,6 +68,7 @@ def measure(base, voice, text, *, reference_prefix_cache=None):
             if last is not None:
                 peak_gap = max(peak_gap, now - last)
             last = now
+            arrivals.append((now, len(block)))
             total += len(block)
             digest.update(block)
     wall = time.perf_counter() - start
@@ -40,7 +77,7 @@ def measure(base, voice, text, *, reference_prefix_cache=None):
     duration = total / 88200
     return {"headers_s": headers, "ttfa_s": first, "wall_s": wall, "bytes": total,
             "audio_s": duration, "rtf": wall / duration, "max_read_gap_s": peak_gap,
-            "pcm_sha256": digest.hexdigest()}
+            "pcm_sha256": digest.hexdigest(), "stream": stream_metrics(arrivals)}
 
 
 if __name__ == "__main__":

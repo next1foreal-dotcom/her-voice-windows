@@ -1,6 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {VoiceClient} from '../web/client.js';
+import {VoiceAudio} from '../web/audio.js';
 import {SNAPSHOT_EXTENSION} from '../web/protocol.js';
 
 const turn = () => new Promise(resolve => setImmediate(resolve));
@@ -378,4 +379,45 @@ test('streaming audio avoids repeated full-state notifications while preserving 
   assert.equal(h.client.diagnostics.recent.length, 1);
   assert.ok(Object.isFrozen(h.client.diagnostics));
   h.audio.drain(); assert.equal(h.client.state.state, 'listening');
+});
+test('a missing saved speaker connects, resets settings, and recovers on device removal', async t => {
+  const sinks = [];
+  let audio, missing = 'expired';
+  const h = harness('sink-recovery', {
+    settings: {outputDeviceId: 'expired', micDeviceId: 'nuroum'},
+    audioFactory(callbacks) {
+      audio = new VoiceAudio(callbacks);
+      audio.context = {state: 'running', resume: async () => {}, close: async () => {},
+        setSinkId: async id => {
+          sinks.push(id);
+          if (id === missing) throw Object.assign(new Error('device not found'), {name: 'NotFoundError'});
+        }};
+      audio.capture = async id => { audio.capturedId = id; return true; };
+      return audio;
+    },
+  });
+  t.after(() => h.client.destroy());
+  const snapshots = [];
+  h.client.subscribe(state => snapshots.push(state));
+  assert.equal(await h.client.connect(), true);
+  assert.equal(h.client.state.connection, 'connected');
+  assert.equal(h.client.state.error, '');
+  assert.equal(h.client.state.settings.outputDeviceId, '');
+  assert.equal(audio.capturedId, 'nuroum');
+  assert.equal(h.client.state.settings.micDeviceId, 'nuroum');
+  assert.ok(snapshots.some(state => state.settings.outputDeviceId === ''));
+  await h.client.updateSettings({outputDeviceId: 'usb-speaker'});
+  missing = 'usb-speaker';
+  for (const listener of h.deviceListeners) listener();
+  await until(() => h.client.state.settings.outputDeviceId === '');
+  assert.equal(h.client.state.connection, 'connected');
+  assert.equal(h.sockets.length, 1, 'output recovery must not reconnect the speech engine');
+  assert.deepEqual(sinks, ['expired', '', 'usb-speaker', 'usb-speaker', '']);
+});
+
+test('an old fallback cannot overwrite a newer output selection', async t => {
+  const h = harness('stale-sink', {settings: {outputDeviceId: 'new-speaker'}});
+  t.after(() => h.client.destroy());
+  h.audio.callbacks.onOutputFallback({requestedDeviceId: 'old-speaker', deviceId: ''});
+  assert.equal(h.client.state.settings.outputDeviceId, 'new-speaker');
 });
