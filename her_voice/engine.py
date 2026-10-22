@@ -391,6 +391,8 @@ def _worker_main() -> None:
         # Refuse stale/unreviewed VAD code before downloading models or
         # importing the upstream package. Installation applies the patch.
         verify_installed_silero_patch()
+        from her_voice.startup_patch import verify_installed_startup_patch
+        verify_installed_startup_patch()
         # Import lazily: loading the UI/doctor/supervisor must not download
         # weights or require inference dependencies. Only the live worker does.
         from her_voice.models import ensure_models
@@ -403,6 +405,8 @@ def _worker_main() -> None:
             install_drama_warmup(backend=backend)
         from her_voice.sentence_stream import install_sentence_streaming
         install_sentence_streaming()
+        from her_voice.latency import install_latency_metadata
+        install_latency_metadata()
         os.environ.update(ensure_models(tts_backend=backend))
         runpy.run_module("speech_to_speech.cli", run_name="__main__")
     finally:

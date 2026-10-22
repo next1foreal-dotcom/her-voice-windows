@@ -1,4 +1,4 @@
-import {ConversationState, sessionUpdate} from './protocol.js';
+import {ConversationState, sessionUpdate, TurnLatency} from './protocol.js';
 import {VoiceAudio, encodeBase64} from './audio.js';
 
 const abortError = () => Object.assign(new Error('Voice operation was cancelled.'), {name: 'AbortError'});
@@ -59,6 +59,7 @@ export class VoiceClient {
     this._mediaDevices = options.mediaDevices ?? globalThis.navigator?.mediaDevices;
     if (typeof this._fetch !== 'function' || typeof this._WebSocket !== 'function') throw new TypeError('VoiceClient needs fetch and WebSocket.');
     this._model = new ConversationState(mode);
+    this._timing = new TurnLatency();
     Object.assign(this._model.snapshot.settings, settingsPatch(options.settings ?? {}));
     this._stateListeners = new Set(); this._levelListeners = new Set(); this._errorListeners = new Set();
     this._levels = {input: 0, output: 0};
@@ -83,13 +84,16 @@ export class VoiceClient {
       onLevel: (input, output) => this._setLevels(input, output),
       onStart: (id, actualOnset) => {
         if (this._destroyed) return;
+        const previousState = this._model.snapshot.state;
         this._model.audioStarted(id);
+        if (actualOnset) this._timing.playback(id);
         if (actualOnset && this._stoppedAt !== null && id === this._model.currentResponseId && !this._model.cancelled.has(id)) {
           this._model.snapshot.metrics.firstAudioMs = Math.round(performance.now() - this._stoppedAt);
           this._stoppedAt = null;
         }
-        this._emit();
+        if (actualOnset || previousState !== this._model.snapshot.state) this._emit();
       },
+      onSchedule: detail => this._timing.scheduled(detail),
       onIdle: () => { if (!this._destroyed) { this._model.audioIdle(); this._emit(); } },
       onError: error => {
         if (this._destroyed) return;
@@ -101,7 +105,8 @@ export class VoiceClient {
     this._mediaDevices?.addEventListener?.('devicechange', this._deviceChange);
   }
 
-  get state() { return freeze(structuredClone(this._model.snapshot)); }
+  get state() { this._model.snapshot.metrics = this._timing.metrics; return freeze(structuredClone(this._model.snapshot)); }
+  get diagnostics() { return freeze(this._timing.snapshot()); }
   subscribe(listener) { return this._subscribe(this._stateListeners, listener, this.state); }
   onLevels(listener) { return this._subscribe(this._levelListeners, listener, Object.freeze({...this._levels})); }
   onError(listener) { return this._subscribe(this._errorListeners, listener); }
@@ -321,6 +326,7 @@ export class VoiceClient {
     finally { if (this._initializePromise === pending) this._initializePromise = null; }
   }
   _beginCycle() {
+    this._timing.cancel();
     this._epoch++; this._connectionAbort?.abort(); this._connectionAbort = new AbortController(); this._lastReportedError = null;
     return this._epoch;
   }
@@ -396,12 +402,14 @@ export class VoiceClient {
             this._report(error);
           }
           const effect = this._model.handle(event);
+          this._timing.observe(event, effect);
           if (effect.configured) finish();
           if (effect.clearAudio) this._audio.clear();
           if (effect.cancelId) this._cancelRemote(effect.cancelId);
           if (effect.userStopped) { this._stoppedAt = performance.now(); this._model.snapshot.metrics.firstAudioMs = null; }
           if (effect.audio) this._audio.enqueue(effect.audio.id, effect.audio.base64);
-          this._emit();
+          // Audio has a separate level channel; publish state at onset/idle, not twice per PCM block.
+          if (!effect.audio) this._emit();
         } catch (error) {
           if (!settled) finish(error);
           else { this._report(error); this.interrupt().catch(() => {}); }
@@ -568,7 +576,8 @@ export class VoiceClient {
     try {
       if (!await this._reconnect(epoch, {capture: false})) return false;
       const id = 'user_' + crypto.randomUUID().replaceAll('-', '');
-      this._model.addUser(text, id); this._stoppedAt = submittedAt;
+      this._model.addUser(text, id);
+      this._timing.begin('text', submittedAt); this._stoppedAt = submittedAt;
       this._model.snapshot.metrics.firstAudioMs = null;
       await this._createItem({id, type: 'message', role: 'user', content: [{type: 'input_text', text}]}, epoch);
       if (!this._current(epoch)) return false;

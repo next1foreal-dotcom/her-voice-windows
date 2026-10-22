@@ -9,7 +9,9 @@ export class StreamingResampler {
   }
 
   push(input) {
-    const out = [];
+    // A fixed output buffer avoids per-sample growth/boxing on the audio thread.
+    const out = new Float32Array(Math.ceil(input.length / this.ratio) + 1);
+    let length = 0;
     for (const sample of input) {
       let available = 1;
       while (available > 1e-9) {
@@ -18,13 +20,13 @@ export class StreamingResampler {
         this.remaining -= take;
         available -= take;
         if (this.remaining < 1e-9) {
-          out.push(this.sum / this.ratio);
+          out[length++] = this.sum / this.ratio;
           this.remaining = this.ratio;
           this.sum = 0;
         }
       }
     }
-    return Float32Array.from(out);
+    return out.subarray(0, length);
   }
 }
 

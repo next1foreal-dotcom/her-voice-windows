@@ -181,3 +181,74 @@ export class ConversationState {
     return result;
   }
 }
+
+// Durations only. No audio, transcript, provider URL or credentials are retained.
+const KEY = 'speech_to_speech.turn_latency';
+const SERVER_FIELDS = ['stt_s', 'llm_ttft_s', 'llm_s', 'tts_ttfa_s', 'e2e_s', 'vad_decision_s', 'hold_s'];
+const milliseconds = value => Number.isFinite(value) && value >= 0 ? Math.round(value * 1000) : null;
+export function serverTimings(metadata) {
+  const raw = metadata?.[KEY];
+  if (typeof raw !== 'string' || raw.length > 2048) return null;
+  let value;
+  try { value = JSON.parse(raw); } catch { return null; }
+  if (!value || ![1, 2].includes(value.version)) return null;
+  const result = {};
+  for (const name of SERVER_FIELDS) result[name.replace(/_s$/, 'Ms')] = milliseconds(value[name]);
+  result.smartStatus = ['complete', 'incomplete', 'failed', 'disabled'].includes(value.smart_status) ? value.smart_status : null;
+  return result;
+}
+
+export class TurnLatency {
+  constructor(now = () => performance.now()) {
+    this.now = now;
+    this.records = [];
+    this.begin(null);
+  }
+  begin(source, at = this.now()) {
+    this.source = source;
+    this.anchor = source ? at : null;
+    this.id = null;
+    this.packetAt = null;
+    this.metrics = {source, firstAudioMs: null, firstPacketMs: null, firstTranscriptMs: null,
+      playbackQueueMs: null, audioMs: 0, gapCount: 0, gapMs: 0, maxQueueMs: 0, server: null, status: null};
+  }
+  cancel() { this.id = null; this.anchor = null; }
+  observe(event, effect = {}) {
+    if (event.type === 'input_audio_buffer.speech_started') this.cancel();
+    if (effect.userStopped) this.begin('speech');
+    if (event.type === 'response.created' && !effect.clearAudio) {
+      if (event.response?.id === this.id) return;
+      if (this.id !== null || this.anchor === null) this.begin(null);
+      this.id = event.response?.id ?? null;
+    }
+    const id = event.response_id ?? event.response?.id;
+    if (!this.id || id !== this.id) return;
+    if (event.type === 'response.output_audio.delta' && effect.audio && this.packetAt === null) {
+      this.packetAt = this.now();
+      this.metrics.firstPacketMs = this.elapsed();
+    }
+    if (event.type === 'response.output_audio_transcript.delta' && event.delta?.trim() && this.metrics.firstTranscriptMs === null) {
+      this.metrics.firstTranscriptMs = this.elapsed();
+    }
+    if (event.type === 'response.done' && this.metrics.status === null) {
+      this.metrics.server = serverTimings(event.response?.metadata);
+      this.metrics.status = ['completed', 'cancelled', 'failed', 'incomplete'].includes(event.response?.status) ? event.response.status : 'unknown';
+      this.records.push(this.metrics);
+      if (this.records.length > 20) this.records.shift();
+    }
+    if (effect.clearAudio) this.cancel();
+  }
+  elapsed() { return this.anchor === null ? null : Math.max(0, Math.round(this.now() - this.anchor)); }
+  playback(id) {
+    if (id !== this.id || this.metrics.firstAudioMs !== null) return;
+    this.metrics.firstAudioMs = this.elapsed();
+    this.metrics.playbackQueueMs = this.packetAt === null ? null : Math.max(0, Math.round(this.now() - this.packetAt));
+  }
+  scheduled({id, durationMs, queueDelayMs, gapMs}) {
+    if (id !== this.id) return;
+    this.metrics.audioMs += durationMs;
+    this.metrics.maxQueueMs = Math.max(this.metrics.maxQueueMs, queueDelayMs);
+    if (gapMs > 2) { this.metrics.gapCount++; this.metrics.gapMs += gapMs; }
+  }
+  snapshot() { return structuredClone({current: this.metrics, recent: this.records}); }
+}

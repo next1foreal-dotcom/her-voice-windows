@@ -1,0 +1,121 @@
+diff --git a/src/community_models/fish_drama3/backbone.cpp b/src/community_models/fish_drama3/backbone.cpp
+index 5935a6c..aac46f7 100644
+--- a/src/community_models/fish_drama3/backbone.cpp
++++ b/src/community_models/fish_drama3/backbone.cpp
+@@ -1633,6 +1633,49 @@ public:
+         ggml_backend_buffer_clear(buffer_.get(), 0);
+     }
+ 
++    // Experimental internal state checkpoint. No generator or public API uses it.
++    // Keep all KV capacity (including masked slots) plus GDN conv/recurrent data.
++    class SavedState {
++        friend class Drama3BackboneCachedDecodeGraph;
++        std::shared_ptr<const int> owner;
++        int64_t steps = 0;
++        std::vector<std::vector<unsigned char>> tensors;
++    };
++
++    SavedState capture_state() const {
++        SavedState saved;
++        saved.owner = state_identity_;
++        saved.steps = valid_steps_;
++        ggml_backend_synchronize(execution_.backend());
++        for (auto * tensor : state_tensors()) {
++            saved.tensors.emplace_back(ggml_nbytes(tensor));
++            auto & bytes = saved.tensors.back();
++            ggml_backend_tensor_get(tensor, bytes.data(), 0, bytes.size());
++        }
++        return saved;
++    }
++
++    void restore_state(const SavedState & saved) {
++        const auto tensors = state_tensors();
++        if (saved.owner != state_identity_ || saved.steps < 0 || saved.steps > cache_steps_ ||
++            saved.tensors.size() != tensors.size()) {
++            throw std::runtime_error("Drama 3 state checkpoint belongs to another decoder");
++        }
++        // Validate everything before writing: a foreign/incomplete checkpoint
++        // must leave the current continuation usable.
++        for (size_t index = 0; index < tensors.size(); ++index) {
++            if (saved.tensors[index].size() != ggml_nbytes(tensors[index])) {
++                throw std::runtime_error("Drama 3 state checkpoint tensor size mismatch");
++            }
++        }
++        ggml_backend_synchronize(execution_.backend());
++        for (size_t index = 0; index < tensors.size(); ++index) {
++            const auto & bytes = saved.tensors[index];
++            ggml_backend_tensor_set(tensors[index], bytes.data(), 0, bytes.size());
++        }
++        valid_steps_ = saved.steps;
++    }
++
+     int64_t valid_steps() const noexcept {
+         return valid_steps_;
+     }
+@@ -1714,6 +1757,16 @@ public:
+     }
+ 
+ private:
++    std::vector<ggml_tensor *> state_tensors() const {
++        std::vector<ggml_tensor *> tensors;
++        for (const auto * group : {&full_key_caches_, &full_value_caches_, &linear_conv_tails_, &linear_recurrent_states_}) {
++            tensors.insert(tensors.end(), group->begin(), group->end());
++        }
++        return tensors;
++    }
++
++    const std::shared_ptr<const int> state_identity_ = std::make_shared<const int>(0);
++
+     struct PrefillGraph {
+         GraphMemory memory;
+         ggml_backend_t backend = nullptr;
+diff --git a/tests/community_models/fish_drama3/backbone_allocation_test.cpp b/tests/community_models/fish_drama3/backbone_allocation_test.cpp
+index 54a5f15..38b91ec 100644
+--- a/tests/community_models/fish_drama3/backbone_allocation_test.cpp
++++ b/tests/community_models/fish_drama3/backbone_allocation_test.cpp
+@@ -232,6 +232,7 @@ int main(int argc, char ** argv) {
+             if (!std::all_of(actual.hidden.begin(), actual.hidden.end(), [](float value) { return std::isfinite(value); }) ||
+                 maximum > 1e-3F || square > 1e-8 * energy)
+                 throw std::runtime_error("grouped and resident batched prefill mismatch");
++            const auto saved = grouped.capture_state();
+             const std::vector<float> next(256, .3F);
+             const auto valid_steps = grouped.valid_steps();
+             grouped.release_prefill_graphs();
+@@ -243,6 +244,37 @@ int main(int argc, char ** argv) {
+             for (size_t i = 0; i < next.size(); ++i) maximum = std::max(maximum, std::abs(expected_next[i] - actual_next[i]));
+             std::cout << "continuation_steps=" << steps << " max_abs=" << maximum << '\n';
+             if (maximum > 1e-4F) throw std::runtime_error("grouped prefill corrupted continuation state");
++            // Exercise all mutable state: advance, reset, compute another prompt,
++            // release graph workspaces, then replay two different continuations.
++            const std::vector<float> second(256, -.4F);
++            const auto expected_second = grouped.run_embedding_step(second);
++            grouped.reset(true);
++            (void)grouped.prefill_embeddings(std::vector<float>(3 * 256, -.2F), 3);
++            (void)grouped.run_embedding_step(second);
++            grouped.release_prefill_graphs();
++            grouped.restore_state(saved);
++            if (grouped.valid_steps() != steps)
++                throw std::runtime_error("state restore lost valid step position");
++            const auto replay_first = grouped.run_embedding_step(next);
++            const auto replay_second = grouped.run_embedding_step(second);
++            if (replay_first != actual_next || replay_second != expected_second)
++                throw std::runtime_error("state restore changed continuation output");
++            // Restores are reusable, and expert LRU placement is deliberately
++            // not part of a numerical state checkpoint.
++            grouped.reset(true);
++            grouped.restore_state(saved);
++            if (grouped.run_embedding_step(next) != actual_next)
++                throw std::runtime_error("repeated state restore changed output");
++            const auto foreign = reference.capture_state();
++            const auto before_reject = grouped.valid_steps();
++            bool rejected = false;
++            try { grouped.restore_state(foreign); }
++            catch (const std::runtime_error &) { rejected = true; }
++            if (!rejected || grouped.valid_steps() != before_reject ||
++                grouped.run_embedding_step(second) != expected_second)
++                throw std::runtime_error("foreign state checkpoint modified decoder");
++            std::cout << "state_snapshot_steps=" << steps << " replay=exact foreign=rejected\n";
++
+             if (steps == 7) {
+                 if (first_hidden.empty()) {
+                     first_hidden = actual.hidden;

@@ -127,16 +127,19 @@ class EngineTests(unittest.TestCase):
         def run(module, *, run_name):
             observed.append((module, run_name, list(sys.argv), {key: os.environ[key] for key in staged}))
         args = ["engine", "--worker", "serve", "--file", str(self.config), "--name", "windows4080"]
-        with patch.dict(sys.modules, {"her_voice.models": fake_models}), patch.dict(os.environ, {"HER_ASR_MODEL_PATH": "stale-unpinned-path"}), patch.object(sys, "argv", args), patch("her_voice.upstream_patch.verify_installed_silero_patch") as verify, patch("her_voice.engine.runpy.run_module", side_effect=run):
+        with patch.dict(sys.modules, {"her_voice.models": fake_models}), patch.dict(os.environ, {"HER_ASR_MODEL_PATH": "stale-unpinned-path"}), patch.object(sys, "argv", args), patch("her_voice.upstream_patch.verify_installed_silero_patch") as verify, patch("her_voice.startup_patch.verify_installed_startup_patch") as startup_verify, patch("her_voice.sentence_stream.install_sentence_streaming") as sentence, patch("her_voice.latency.install_latency_metadata") as latency, patch("her_voice.engine.runpy.run_module", side_effect=run):
             _worker_main()
         verify.assert_called_once_with()
+        startup_verify.assert_called_once_with()
+        sentence.assert_called_once_with()
+        latency.assert_called_once_with()
         fake_models.ensure_models.assert_called_once_with(tts_backend="qwen3")
         self.assertEqual(observed, [("speech_to_speech.cli", "__main__", ["speech-to-speech", *args[2:]], staged)])
 
     def test_model_staging_failure_does_not_launch_upstream(self):
         fake_models = ModuleType("her_voice.models")
         fake_models.ensure_models = Mock(side_effect=RuntimeError("fixture missing model files"))
-        with patch.dict(sys.modules, {"her_voice.models": fake_models}), patch.object(sys, "argv", ["engine", "--worker", "serve"]), patch("her_voice.upstream_patch.verify_installed_silero_patch"), patch("her_voice.engine.runpy.run_module") as run:
+        with patch.dict(sys.modules, {"her_voice.models": fake_models}), patch.object(sys, "argv", ["engine", "--worker", "serve"]), patch("her_voice.upstream_patch.verify_installed_silero_patch"), patch("her_voice.startup_patch.verify_installed_startup_patch"), patch("her_voice.sentence_stream.install_sentence_streaming"), patch("her_voice.latency.install_latency_metadata"), patch("her_voice.engine.runpy.run_module") as run:
             with self.assertRaisesRegex(RuntimeError, "missing model files"):
                 _worker_main()
         run.assert_not_called()

@@ -12,7 +12,7 @@ from collections.abc import Callable
 from typing import Optional
 
 from nltk import sent_tokenize
-from her_voice.sentence_stream import sentence_tokenizer, install_sentence_streaming, SOURCE_SHA256, UTILS_SHA256
+from her_voice.sentence_stream import sentence_tokenizer, install_sentence_streaming, SOURCE_SHA256, UTILS_SHA256, first_clause_stream
 
 ROOT = Path(__file__).resolve().parents[1]
 BASE = ROOT / ".venv-speech/Lib/site-packages/speech_to_speech/LLM"
@@ -38,6 +38,7 @@ def consumer(tokenizer):
         ns[name] = type(name, (), {"__init__": lambda self, text="": setattr(self, "text", text)})
     module = ast.Module(body=[method], type_ignores=[])
     exec(compile(ast.fix_missing_locations(module), "pinned-consumer", "exec", flags=__import__('__future__').annotations.compiler_flag), ns)
+    ns['_consume_streaming'] = first_clause_stream(ns['_consume_streaming'])
     return ns
 
 
@@ -73,6 +74,35 @@ class SentenceStreamingTests(unittest.TestCase):
         self.assertEqual(list(stream), ["接着补充细节。"])
         self.assertEqual(state.clean_text, "先说重点。接着补充细节。")
 
+    def test_long_first_clause_can_leave_before_the_full_sentence(self):
+        prefix = "关于这个启动速度的问题我们可以先从磁盘读取顺序开始优化，"
+        stream, state = self.run_stream([prefix, "然后再检查模型加载与预热过程。", "后续的句子保持自然，避免频繁切碎。"])
+        self.assertEqual(next(stream), prefix)
+        self.assertEqual(list(stream), ["然后再检查模型加载与预热过程。", "后续的句子保持自然，避免频繁切碎。"])
+        self.assertEqual(state.clean_text, prefix + "然后再检查模型加载与预热过程。后续的句子保持自然，避免频繁切碎。")
+    def test_early_clause_preserves_quotes_short_phrases_and_markdown(self):
+        for parts in [
+            ["这是短句，", "不应该切碎。"],
+            ["他说“这是一个需要保持完整和自然语气的较长说明，", "请不要在引号里面切分”。"],
+            ["这里有 `很长的中文示例需要完整保留不能被拆开的程序代码，", "代码结束` 然后继续。"],
+        ]:
+            stream, state = self.run_stream(parts)
+            output = list(stream)
+            self.assertEqual(len(output), 1)
+            baseline_stream, baseline = self.run_stream(parts, fixed=False)
+            list(baseline_stream)
+            self.assertEqual(state.clean_text, baseline.clean_text)
+        stream, _ = self.run_stream(["关于这个启动速度的问题我们可以先从磁盘读取顺序开始优化，", "后续内容"], wants_audio=False)
+        self.assertEqual(list(stream), ["关于这个启动速度的问题我们可以先从磁盘读取顺序开始优化，", "后续内容"])
+
+    def test_first_clause_state_does_not_leak_across_interleaved_turns(self):
+        prefix = "关于这个启动速度的问题我们可以先从磁盘读取顺序开始优化，"
+        first, _ = self.run_stream([prefix, "第一轮继续。"])
+        second, _ = self.run_stream([prefix, "第二轮继续。"])
+        self.assertEqual(next(first), prefix)
+        self.assertEqual(next(second), prefix)
+        self.assertEqual(list(first), ["第一轮继续。"])
+        self.assertEqual(list(second), ["第二轮继续。"])
     def test_original_path_reproduces_whole_reply_wait(self):
         stream, _ = self.run_stream(["先说重点。", "接着补充细节。"], fixed=False)
         self.assertEqual(list(stream), ["先说重点。接着补充细节。"])

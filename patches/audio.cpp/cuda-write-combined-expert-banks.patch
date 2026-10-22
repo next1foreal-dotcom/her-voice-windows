@@ -1,0 +1,101 @@
+diff --git a/external/ggml/src/ggml-cuda/ggml-cuda.cu b/external/ggml/src/ggml-cuda/ggml-cuda.cu
+--- a/external/ggml/src/ggml-cuda/ggml-cuda.cu
++++ b/external/ggml/src/ggml-cuda/ggml-cuda.cu
+@@ -1493,7 +1493,7 @@ ggml_backend_buffer_type_t ggml_backend_cuda_split_buffer_type(int main_device,
+ // host buffer type
+ 
+ static const char * ggml_backend_cuda_host_buffer_type_name(ggml_backend_buffer_type_t buft) {
+-    return GGML_CUDA_NAME "_Host";
++    return buft->context ? GGML_CUDA_NAME "_Host_WriteCombined" : GGML_CUDA_NAME "_Host";
+ 
+     GGML_UNUSED(buft);
+ }
+@@ -1506,13 +1506,19 @@ static void ggml_backend_cuda_host_buffer_free_buffer(ggml_backend_buffer_t buff
+     CUDA_CHECK(cudaFreeHost(buffer->context));
+ }
+ 
+-static void * ggml_cuda_host_malloc(size_t size) {
++static void * ggml_cuda_host_malloc(size_t size, bool write_combined = false) {
+     if (getenv("GGML_CUDA_NO_PINNED") != nullptr) {
+         return nullptr;
+     }
+ 
+     void * ptr = nullptr;
++    #if !defined(GGML_USE_HIP) && !defined(GGML_USE_MUSA)
++    cudaError_t err = write_combined ? cudaHostAlloc((void **) &ptr, size, cudaHostAllocWriteCombined)
++                                    : cudaMallocHost((void **) &ptr, size);
++#else
++    GGML_UNUSED(write_combined);
+     cudaError_t err = cudaMallocHost((void **) &ptr, size);
++#endif
+     if (err != cudaSuccess) {
+         // clear the error
+         (void)cudaGetLastError();
+@@ -1525,7 +1531,7 @@ static void * ggml_cuda_host_malloc(size_t size) {
+ }
+ 
+ static ggml_backend_buffer_t ggml_backend_cuda_host_buffer_type_alloc_buffer(ggml_backend_buffer_type_t buft, size_t size) {
+-    void * ptr = ggml_cuda_host_malloc(size);
++    void * ptr = ggml_cuda_host_malloc(size, buft->context != nullptr);
+ 
+     if (ptr == nullptr) {
+         // fallback to cpu buffer
+@@ -1556,6 +1562,20 @@ ggml_backend_buffer_type_t ggml_backend_cuda_host_buffer_type() {
+     return &ggml_backend_cuda_buffer_type_host;
+ }
+ 
++// The marker changes only allocation policy; tensor geometry and device buffers
++// stay identical. Default pinned staging/readback retains its cacheable policy.
++extern "C" GGML_BACKEND_API ggml_backend_buffer_type_t ggml_backend_cuda_host_write_combined_buffer_type() {
++#if !defined(GGML_USE_HIP) && !defined(GGML_USE_MUSA)
++    static ggml_backend_buffer_type buft = [] {
++        auto result = *ggml_backend_cuda_host_buffer_type();
++        result.context = reinterpret_cast<void *>(uintptr_t(1));
++        return result;
++    }();
++    return &buft;
++#else
++    return ggml_backend_cuda_host_buffer_type();
++#endif
++}
+ //static bool ggml_backend_buffer_is_cuda_host(ggml_backend_buffer_t buffer) {
+ //    return buffer->buft->iface.get_name == ggml_backend_cuda_host_buffer_type_name;
+ //}
+diff --git a/src/framework/core/disk_expert_weight_store.cpp b/src/framework/core/disk_expert_weight_store.cpp
+--- a/src/framework/core/disk_expert_weight_store.cpp
++++ b/src/framework/core/disk_expert_weight_store.cpp
+@@ -6,6 +6,11 @@
+ 
+ #include <ggml-alloc.h>
+ #include <gguf.h>
++#if defined(GGML_USE_CUDA) && !defined(GGML_USE_HIP) && !defined(GGML_USE_MUSA)
++#include <ggml-cuda.h>
++// Private engine/ggml extension; keep the public ggml header unchanged.
++extern "C" GGML_BACKEND_API ggml_backend_buffer_type_t ggml_backend_cuda_host_write_combined_buffer_type();
++#endif
+ 
+ #include <algorithm>
+ #include <cstring>
+@@ -287,7 +292,12 @@ size_t DiskExpertWeightStore::add_group(const std::vector<std::string> & names,
+     group->expert_ids.assign(static_cast<size_t>(slots), -1);
+     group->last_used.assign(static_cast<size_t>(slots), 0);
+     if (impl_->pin_experts) {
+-        const auto host_type = ggml_backend_dev_host_buffer_type(ggml_backend_get_device(backend));
++        auto host_type = ggml_backend_dev_host_buffer_type(ggml_backend_get_device(backend));
++#if defined(GGML_USE_CUDA) && !defined(GGML_USE_HIP) && !defined(GGML_USE_MUSA)
++        // Expert banks are written once by the loader and read only by DMA.
++        // Do not apply write-combining to ordinary staging or CPU expert work.
++        if (ggml_backend_is_cuda(backend)) host_type = ggml_backend_cuda_host_write_combined_buffer_type();
++#endif
+         if (!host_type) throw std::runtime_error("pinned experts require a backend with pinned host buffers");
+         size_t host_bytes = 0;
+         for (const auto & projection : group->projections) host_bytes += projection.expert_bytes * projection.experts;
+@@ -297,7 +307,7 @@ size_t DiskExpertWeightStore::add_group(const std::vector<std::string> & names,
+         if (!group->host_buffer || ggml_backend_buffer_get_type(group->host_buffer) != host_type)
+             throw std::runtime_error("cannot allocate pinned host expert banks");
+         if (impl_->stats.host_buffer_bytes == 0)
+-            debug::trace_log_scalar("disk_experts.host_buffer_type", ggml_backend_buft_name(host_type));
++            debug::trace_log_scalar("disk_experts.host_buffer_type", std::string_view(ggml_backend_buft_name(host_type)));
+         auto * data = static_cast<std::byte *>(ggml_backend_buffer_get_base(group->host_buffer));
+         for (auto & projection : group->projections) {
+             const auto bytes = projection.expert_bytes * projection.experts;

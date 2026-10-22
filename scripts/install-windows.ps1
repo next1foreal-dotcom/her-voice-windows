@@ -105,6 +105,7 @@ try {
     # verifies this isolated venv, exact upstream provenance and whole-file hashes.
     # Unknown source is refused; rerunning an already applied patch is harmless.
     Invoke-NativeChecked -Executable $VenvPython -Arguments @((Join-Path $PSScriptRoot 'pin-silero.py'))
+    Invoke-NativeChecked -Executable $VenvPython -Arguments @((Join-Path $PSScriptRoot 'trim-startup.py'))
     Invoke-NativeChecked -Executable $VenvPython -Arguments @('-m', 'pip', 'check')
 
     New-Item -ItemType Directory -Path $RuntimeDir -Force | Out-Null

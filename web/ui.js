@@ -476,6 +476,10 @@ export function createUI(actions = {}) {
     el["user-caption-text"].title = text(snapshot.caption.user);
     el["interrupt-button"].hidden = !isConnected || !["thinking", "speaking"].includes(voiceState);
     const firstAudio = snapshot.metrics.firstAudioMs;
+    const timing = snapshot.metrics.server;
+    const timingParts = timing ? [['辨識', timing.sttMs], ['回答首字', timing.llm_ttftMs], ['回答生成全程', timing.llmMs], ['語音合成首段', timing.tts_ttfaMs],
+      ['停頓判定', timing.vad_decisionMs], ['等待續說', timing.holdMs], ['伺服器首音', timing.e2eMs]] : [];
+    el["latency-label"].title = timingParts.filter(([, ms]) => Number.isFinite(ms)).map(([name, ms]) => `${name} ${(ms / 1000).toFixed(2)} 秒`).join('；');
     el["latency-label"].hidden = !isConnected || !Number.isFinite(firstAudio) || firstAudio < 0;
     el["latency-label"].textContent = Number.isFinite(firstAudio) && firstAudio >= 0 ? `事件至播放約 ${(firstAudio / 1000).toFixed(2)} 秒` : "";
 

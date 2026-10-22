@@ -10,12 +10,55 @@ from importlib import import_module
 from pathlib import Path
 import re
 from collections.abc import Callable
+from contextvars import ContextVar
+from functools import wraps
 
 MODULE = "speech_to_speech.LLM.base_openai_compatible_language_model"
 SOURCE_SHA256 = "238c8cfaa2a15de75c1ecc6f4eb63e9b103216eed6be2f35538d1d0d41882609"
 UTILS_SHA256 = "23159aa9539974feb02261c1decefa929b43d3f0294ca0f97347af08cfea4d11"
 _BOUNDARY = re.compile(r'[。！？]+["\')）]*')
 
+
+# The generator wrapper binds only while advancing upstream, not while yielding.
+# Independent turns and consumers never share first-clause state.
+_TURN = ContextVar("her_first_clause_turn", default=None)
+
+
+def _first_clause(text: str) -> int | None:
+    if _BOUNDARY.search(text) or "`" in text or "http://" in text or "https://" in text:
+        return None
+    closers = {"（": "）", "(": ")", "[": "]", "【": "】", "“": "”", "「": "」", "『": "』", '"': '"'}
+    stack: list[str] = []
+    for index, char in enumerate(text):
+        if stack and char == stack[-1]:
+            stack.pop()
+        elif char in closers:
+            stack.append(closers[char])
+        elif char in "，；" and not stack:
+            prefix = text[:index + 1]
+            if len(prefix.strip()) >= 24 and len(re.findall(r"[\u3400-\u9fff]", prefix)) >= 12:
+                return index + 1
+    return None
+
+
+def first_clause_stream(consume):
+    """Keep upstream cancellation/history/Markdown handling; scope one early split."""
+    @wraps(consume)
+    def stream(self, events, state, turn):
+        original = consume(self, events, state, turn)
+        try:
+            while True:
+                token = _TURN.set((state, turn))
+                try:
+                    chunk = next(original)
+                except StopIteration as finished:
+                    return finished.value
+                finally:
+                    _TURN.reset(token)
+                yield chunk
+        finally:
+            original.close()
+    return stream
 
 def sentence_tokenizer(original: Callable[[str], list[str]]) -> Callable[[str], list[str]]:
     """Keep English segmentation; flush complete CJK sentences immediately.
@@ -25,6 +68,11 @@ def sentence_tokenizer(original: Callable[[str], list[str]]) -> Callable[[str], 
     This binding is called inside upstream's existing Markdown protection.
     """
     def tokenize(text: str) -> list[str]:
+        active = _TURN.get()
+        if active is not None and active[1].wants_audio and not active[0].output_emitted:
+            end = _first_clause(text)
+            if end is not None:
+                return [text[:end], *original(text[end:])] if text[end:].strip() else [text[:end], ""]
         matches = list(_BOUNDARY.finditer(text))
         if not matches:
             return original(text)
@@ -49,5 +97,7 @@ def install_sentence_streaming() -> bool:
     if getattr(module, "_her_sentence_streaming", False):
         return False
     module.sent_tokenize = sentence_tokenizer(module.sent_tokenize)
+    handler = module.BaseOpenAICompatibleHandler
+    handler._consume_streaming = first_clause_stream(handler._consume_streaming)
     module._her_sentence_streaming = True
     return True

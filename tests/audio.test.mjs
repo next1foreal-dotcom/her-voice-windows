@@ -188,3 +188,45 @@ test('ignored microphone permission times out and releases a late grant', async 
   assert.equal(audio.stream, null);
   await audio.close();
 });
+test('transport jitter does not insert silence while audio remains queued', () => {
+  const schedules = [];
+  const output = new VoiceAudio({onSchedule: value => schedules.push(value)});
+  output.context = new FakeContext();
+  const pcm = encodeBase64(floatToPCM16(new Float32Array(768))); // 32 ms
+  for (const arrival of [0, 0.037, 0.069, 0.101]) {
+    output.context.currentTime = arrival;
+    output.enqueue('same-response', pcm);
+  }
+  const starts = output.context.nodes.map(node => node.when);
+  output.clear();
+  assert.ok(Math.abs(starts[0] - 0.035) < 1e-9, 'initial lead is retained');
+  for (let i = 1; i < starts.length; i++) {
+    assert.ok(Math.abs(starts[i] - starts[i - 1] - 0.032) < 1e-9,
+      `packet ${i} inserted silence despite remaining queued audio`);
+    assert.equal(schedules[i].gapMs, 0);
+  }
+});
+test('a real underrun restores startup lead and clear drops the old timeline', () => {
+  const output = new VoiceAudio({});
+  output.context = new FakeContext();
+  const pcm = encodeBase64(floatToPCM16(new Float32Array(768)));
+  output.enqueue('a', pcm);
+  output.context.currentTime = 0.2;
+  output.enqueue('a', pcm);
+  assert.ok(Math.abs(output.context.nodes[1].when - 0.235) < 1e-9);
+  output.clear();
+  output.context.currentTime = 0.3;
+  output.enqueue('b', pcm);
+  assert.ok(Math.abs(output.context.nodes[2].when - 0.335) < 1e-9);
+  output.clear();
+});
+test('resampling retains prior outputs and handles empty input at fractional boundaries', () => {
+  const converter = new StreamingResampler(48000);
+  assert.deepEqual([...converter.push(Float32Array.of(0.25))], []);
+  assert.deepEqual([...converter.push(new Float32Array())], []);
+  const first = converter.push(Float32Array.of(0.75, -0.5, 0.5));
+  assert.deepEqual([...first], [0.5, 0]);
+  converter.push(Float32Array.of(1, 1, -1, -1));
+  assert.deepEqual([...first], [0.5, 0], 'a subsequent quantum must not overwrite emitted samples');
+  assert.deepEqual([...converter.push(new Float32Array())], []);
+});

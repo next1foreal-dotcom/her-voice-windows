@@ -357,3 +357,25 @@ test('startup failure reaches the error state without opening capture or a socke
   assert.equal(h.audio.stream, null);
   assert.equal(h.sockets.length, 0);
 });
+
+test('streaming audio avoids repeated full-state notifications while preserving onset, timings and completion', async t => {
+  const h = harness(); t.after(() => h.client.destroy());
+  await h.client.connect();
+  let notifications = 0; h.client.subscribe(() => notifications++);
+  const socket = h.latest();
+  socket.emit({type: 'input_audio_buffer.speech_stopped', item_id: 'u'});
+  socket.emit({type: 'response.created', response: {id: 'r'}});
+  const before = notifications;
+  for (let i = 0; i < 100; i++) socket.emit({type: 'response.output_audio.delta', response_id: 'r', delta: 'AQACAA=='});
+  assert.equal(h.audio.queue.length, 100);
+  assert.ok(notifications - before <= 1, `Audio chunks caused ${notifications - before} full state notifications`);
+  h.audio.callbacks.onStart('r', true);
+  assert.equal(h.client.state.state, 'speaking');
+  assert.ok(Number.isFinite(h.client.state.metrics.firstAudioMs));
+  socket.emit({type: 'response.done', response: {id: 'r', status: 'completed', metadata: {
+    'speech_to_speech.turn_latency': JSON.stringify({version: 2, stt_s: 0.12, tts_ttfa_s: 1.8})}}});
+  assert.equal(h.client.state.metrics.server.sttMs, 120);
+  assert.equal(h.client.diagnostics.recent.length, 1);
+  assert.ok(Object.isFrozen(h.client.diagnostics));
+  h.audio.drain(); assert.equal(h.client.state.state, 'listening');
+});

@@ -13,8 +13,8 @@ function decodeBase64(value) {
 }
 
 export class VoiceAudio {
-  constructor({onFrame, onLevel, onStart, onIdle, onError}) {
-    Object.assign(this, {onFrame, onLevel, onStart, onIdle, onError});
+  constructor({onFrame, onLevel, onStart, onIdle, onError, onSchedule}) {
+    Object.assign(this, {onFrame, onLevel, onStart, onIdle, onError, onSchedule});
     this.context = null;
     this.stream = null;
     this.pendingStream = null;
@@ -125,8 +125,12 @@ export class VoiceAudio {
     const node = context.createBufferSource();
     node.buffer = audioBuffer;
     node.connect(context.destination);
-    const when = Math.max(this.nextTime, context.currentTime + 0.035);
+    // Preserve a queued boundary even when transport jitter uses some lead.
+    // Reapplying startup lead to every packet inserts artificial silence.
+    const when = this.nextTime > context.currentTime ? this.nextTime : context.currentTime + 0.035;
+    const gapMs = this.nextTime > 0 ? Math.max(0, when - this.nextTime) * 1000 : 0;
     this.nextTime = when + audioBuffer.duration;
+    this.onSchedule?.({id, durationMs: audioBuffer.duration * 1000, queueDelayMs: (when - context.currentTime) * 1000, gapMs});
     const epoch = this.epoch;
     this.sources.add(node);
     node.onended = () => {
