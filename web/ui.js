@@ -198,6 +198,20 @@ export function createUI(actions = {}) {
   listen(el["call-button"], "click", () => {
     invoke(snapshot.connection === "connected" || snapshot.connection === "connecting" ? "onStop" : "onStart");
   });
+  function activateRibbon() {
+    if (snapshot.voiceAdmin?.busy) return;
+    if (snapshot.connection === "connecting") return invoke("onStop");
+    if (!connected()) return invoke("onStart");
+    if (["thinking", "speaking"].includes(snapshot.state) && !snapshot.paused) return invoke("onInterrupt");
+    invoke("onPause");
+  }
+  listen(el["sound-canvas"], "click", activateRibbon);
+  listen(el["sound-canvas"], "keydown", event => {
+    if (event.repeat || event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
+    if (event.key === "Enter" || event.code === "Space") {
+      event.preventDefault(); event.stopPropagation(); activateRibbon();
+    }
+  });
   listen(el["mic-button"], "click", () => invoke("onPause"));
   listen(el["captions-button"], "click", () => invoke("onSettingsChange", { captions: !snapshot.settings.captions }));
   listen(el["keyboard-button"], "click", () => setComposer(!composerOpen));
@@ -414,7 +428,9 @@ export function createUI(actions = {}) {
       ? { disconnected: "示範待命", connecting: "準備示範", connected: "示範演練", error: "示範中斷" }
       : { disconnected: "未連線", connecting: "連線中", connected: "已連線", error: "連線中斷" };
     const connectionLabel = paused && isConnected ? demo ? "示範已暫停" : "已暫停" : connectionLabels[connection];
-    el["connection-label"].textContent = connectionLabel;
+    const stateLabels = {idle: "待命", listening: "聆聽", thinking: "思考", speaking: "說話", interrupted: "已打斷", paused: "已暫停"};
+    el["connection-label"].textContent = isConnected ? stateLabels[voiceState] : connection === "disconnected" ? "待命" : connectionLabel;
+    el["sound-canvas"].setAttribute("aria-label", snapshot.voiceAdmin?.busy ? "正在套用聲音設定" : connection === "connecting" ? "取消連線" : !isConnected ? "開始對話" : paused ? "恢復對話" : ["thinking", "speaking"].includes(voiceState) ? "打斷回覆" : "暫停對話");
     el["mode-notice"].hidden = !demo;
     el["mode-notice"].textContent = "示範模式 · 協定演練／測試音，不使用麥克風或 API";
     el["mode-button-label"].textContent = demo ? "切回真實連線" : "試用示範";
@@ -470,6 +486,8 @@ export function createUI(actions = {}) {
     el["main-caption"].textContent = showTranscript ? text(snapshot.caption.assistant) : heading;
     el["main-caption"].classList.toggle("has-transcript", showTranscript);
     el["supporting-caption"].textContent = supporting;
+    el["main-caption"].hidden = connection === "disconnected";
+    el["supporting-caption"].hidden = connection === "disconnected";
     const showUser = Boolean(snapshot.settings.captions && isConnected && text(snapshot.caption.user));
     el["user-caption"].hidden = !showUser;
     el["user-caption-text"].textContent = text(snapshot.caption.user);
@@ -529,7 +547,7 @@ export function createUI(actions = {}) {
  * or per-frame vector playback. Analytic curve + compact Fourier deformation/width/opacity functions each tick.
  * Original used only for offline fitting and side-by-side QA.
  * The annular ribbon de-twists into a single ring using the same mesh.
- * Frontend only: voice backend is NOT connected. */
+ * Renderer only; createSoundField below receives VoiceClient state and audio levels. */
 (function(global){
 'use strict';
 const FIT={"R":246.47314884694768,"H":56.23224548129997,"ex":0.19488482263878898,"K":4.066937804453259,"t0":1.9117729371420353,"w":-10.863007899287409,"W":21.099525550778324,"b0":1.3352040524110054,"b1":-1.0329263981839685,"amin":0.03466537834674127,"amax":0.8056924170245459,"contrast":-0.3208459500996237,"ringR":98.5,"ringW":17,"ringDY":45};
@@ -809,8 +827,7 @@ function createSoundField(canvas, waveform, orbButton) {
   }
   function resize(){
     if(destroyed)return;
-    const b=canvas.getBoundingClientRect();
-    ribbon.opts.scale=Math.min(b.width*.84/520,b.height*.88/300);
+
     ribbon.resize();schedule();
   }
   on(document,'visibilitychange',schedule);

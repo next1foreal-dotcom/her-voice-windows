@@ -2,9 +2,9 @@
 <html lang="zh-Hant">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="color-scheme" content="dark" />
-    <meta name="theme-color" content="#080d11" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light" />
+    <meta name="theme-color" content="#DC5C35" />
     <meta name="description" content="本機語音介面：收音、字幕、串流播放與可配置的 Agent 接口。" />
     <title>HER Voice</title>
     <link rel="stylesheet" href="./styles.css" />
@@ -30,46 +30,40 @@
     </svg>
 
     <div id="voice-app" class="voice-shell" data-state="idle" data-mode="live" data-connection="disconnected">
-      <header class="app-header">
-        <a class="wordmark" href="./" aria-label="HER Voice 首頁"><span class="wordmark-her">HER</span><span class="wordmark-divider" aria-hidden="true"></span><span class="wordmark-voice">VOICE</span></a>
-        <div class="header-actions">
-          <div class="connection-status" aria-label="連線狀態"><span class="connection-dot" aria-hidden="true"></span><span id="connection-label">未連線</span></div>
-          <span class="header-divider" aria-hidden="true"></span>
-          <button class="header-button" id="history-button" type="button" aria-label="開啟會話記錄" aria-haspopup="dialog" aria-controls="history-dialog"><svg class="icon"><use href="#icon-history"/></svg><span>會話</span></button>
-          <button class="header-button" id="settings-button" type="button" aria-label="開啟聲音與連線設定" aria-haspopup="dialog" aria-controls="settings-dialog"><svg class="icon"><use href="#icon-settings"/></svg><span>設定</span></button>
-        </div>
+      <header class="top">
+        <div class="identity"><span class="brand">Her Voice Win</span><span class="badge" id="architecture-label">本機聽說 · DeepSeek 對話</span></div>
+        <span id="connection-label" role="status">待命</span>
       </header>
-
-      <main class="voice-stage" id="main-content" aria-labelledby="main-caption">
+      <main class="scene" id="main-content" aria-label="OS¹ 語音對話">
+        <canvas id="sound-canvas" aria-label="開始對話" role="button" tabindex="0"></canvas>
         <p id="mode-notice" class="mode-notice" hidden>示範模式 · 不開啟麥克風，不呼叫 API</p>
-        <div id="error-notice" class="error-notice" role="alert" hidden><p id="error-message"></p><button id="error-settings" class="text-button" type="button">查看設定<svg class="icon"><use href="#icon-arrow"/></svg></button></div>
-        <div class="sound-field" aria-hidden="true"><canvas id="sound-canvas"></canvas></div>
-        <div id="waveform" class="waveform" aria-hidden="true"></div>
-        <div class="caption-stage">
-          <p id="user-caption" class="user-caption" hidden><span class="caption-speaker">你</span><span id="user-caption-text"></span></p>
-          <h1 id="main-caption">準備好聽你說。</h1>
-          <p id="supporting-caption" class="supporting-caption">從一個念頭，開始一段對話。</p>
-          <div class="response-details"><button id="interrupt-button" class="interrupt-button" type="button" hidden><svg class="icon"><use href="#icon-stop"/></svg>打斷回覆<span class="key-hint">Esc</span></button><span id="latency-label" class="latency-label" hidden></span></div>
-        </div>
+        <div id="error-notice" class="error-notice" role="alert" hidden><p id="error-message"></p><button id="error-settings" class="text-button" type="button">查看設定</button></div>
       </main>
-
-      <div class="bottom-region">
+      <footer class="dock">
+        <div class="caption-stage cap">
+          <p id="user-caption" class="user-caption" hidden><span class="sr-only">你</span><span id="user-caption-text"></span></p>
+          <h1 id="main-caption" hidden></h1>
+          <p id="supporting-caption" class="supporting-caption" hidden></p>
+          <div class="response-details"><button id="interrupt-button" class="interrupt-button" type="button" hidden>打斷回覆<span class="key-hint">Esc</span></button><span id="latency-label" class="latency-label" hidden></span></div>
+        </div>
+        <div id="waveform" hidden aria-hidden="true"></div>
         <form id="text-composer" class="text-composer" hidden>
           <label class="sr-only" for="message-input">輸入訊息</label>
           <textarea id="message-input" rows="1" placeholder="想打字也可以…" autocomplete="off" aria-describedby="composer-hint"></textarea>
-          <button id="send-button" class="send-button" type="submit" aria-label="送出訊息" disabled><svg class="icon"><use href="#icon-send"/></svg></button>
-          <p id="composer-hint" class="composer-hint">Enter 送出 · Shift + Enter 換行</p>
+          <button id="send-button" class="send-button" type="submit" aria-label="送出訊息" disabled>送出</button>
+          <p id="composer-hint" class="composer-hint">開始對話後即可送出訊息</p>
         </form>
-        <section class="call-controls" aria-label="語音控制">
-          <div class="control-with-label"><button id="mic-button" class="round-control" type="button" aria-label="暫停麥克風" aria-pressed="false" disabled><svg class="icon"><use href="#icon-mic"/></svg></button><span id="mic-label">麥克風</span></div>
-          <div class="control-with-label"><button id="captions-button" class="round-control" type="button" aria-label="隱藏字幕" aria-pressed="true"><svg class="icon"><use href="#icon-captions"/></svg></button><span>字幕</span></div>
-          <button id="call-button" class="call-button" type="button"><svg class="icon"><use href="#icon-phone"/></svg><span id="call-label">開始對話</span></button>
-          <div class="control-with-label"><button id="sound-button" class="round-control" type="button" aria-label="選擇播放裝置" aria-haspopup="dialog" aria-controls="settings-dialog"><svg class="icon"><use href="#icon-speaker"/></svg></button><span>聲音</span></div>
-          <div class="control-with-label"><button id="keyboard-button" class="round-control" type="button" aria-label="顯示文字輸入" aria-expanded="false" aria-controls="text-composer"><svg class="icon"><use href="#icon-keyboard"/></svg></button><span>輸入</span></div>
-        </section>
-      </div>
-
-      <footer class="app-footer"><p id="architecture-label">本機聽說 · DeepSeek 對話</p><button id="mode-button" class="text-button" type="button"><span id="mode-button-label">試用示範</span><svg class="icon"><use href="#icon-arrow"/></svg></button></footer>
+        <div class="bar" role="group" aria-label="語音控制">
+          <button id="call-button" class="call-button" type="button"><span id="call-label">開始對話</span></button>
+          <button id="mic-button" type="button" aria-label="暫停麥克風" aria-pressed="false" disabled><span id="mic-label">麥克風</span></button>
+          <button id="captions-button" type="button" aria-label="隱藏字幕" aria-pressed="true">字幕</button>
+          <button id="keyboard-button" type="button" aria-label="顯示文字輸入" aria-expanded="false" aria-controls="text-composer">輸入</button>
+          <button id="sound-button" type="button" aria-label="選擇播放裝置" aria-haspopup="dialog" aria-controls="settings-dialog">聲音</button>
+          <button id="history-button" type="button" aria-label="開啟會話記錄" aria-haspopup="dialog" aria-controls="history-dialog">會話</button>
+          <button id="settings-button" type="button" aria-label="開啟聲音與連線設定" aria-haspopup="dialog" aria-controls="settings-dialog">設定</button>
+          <button id="mode-button" class="mode-button" type="button"><span id="mode-button-label">試用示範</span></button>
+        </div>
+      </footer>
     </div>
 
     <dialog id="settings-dialog" class="side-panel" aria-labelledby="settings-title">
