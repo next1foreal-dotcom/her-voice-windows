@@ -123,7 +123,7 @@ export function createUI(actions = {}) {
   function openPanel(panel, focusTarget) {
     if (panel.open) return;
     closePanels();
-    restoreFocus = document.activeElement;
+    restoreFocus = document.activeElement?.closest("details")?.querySelector("summary") || document.activeElement;
     panel.showModal();
     if (panel === el["settings-dialog"]) invoke("onLoadVoiceSettings");
     if (focusTarget) focusTarget.focus({ preventScroll: true });
@@ -167,7 +167,7 @@ export function createUI(actions = {}) {
       }
     } else {
       syncLayoutSpace();
-      el["keyboard-button"].focus({ preventScroll: true });
+      (document.querySelector("#tools-menu summary") || el["keyboard-button"]).focus({ preventScroll: true });
     }
   }
 
@@ -219,6 +219,15 @@ export function createUI(actions = {}) {
   listen(el["interrupt-button"], "click", () => invoke("onInterrupt"));
   listen(el["clear-history"], "click", () => invoke("onClearHistory"));
   listen(el["mode-button"], "click", () => invoke("onModeChange", snapshot.mode === "demo" ? "live" : "demo"));
+  const toolsMenu = document.getElementById("tools-menu");
+  listen(toolsMenu, "click", event => {
+    if (!event.target.closest("button")) return;
+    toolsMenu.open = false;
+    if (toolsMenu.contains(document.activeElement)) toolsMenu.querySelector("summary").focus({ preventScroll: true });
+  });
+  listen(document, "click", event => {
+    if (!toolsMenu.contains(event.target)) toolsMenu.open = false;
+  });
   listen(el["captions-setting"], "change", (event) => invoke("onSettingsChange", { captions: event.target.checked }));
   listen(el["barge-in-setting"], "change", (event) => invoke("onSettingsChange", { bargeIn: event.target.checked }));
   listen(el["mic-device"], "change", (event) => invoke("onSettingsChange", { micDeviceId: event.target.value }));
@@ -258,6 +267,12 @@ export function createUI(actions = {}) {
   listen(document, "keydown", (event) => {
     if (event.repeat || event.ctrlKey || event.metaKey || event.altKey || event.isComposing) return;
     if (el["settings-dialog"].open || el["history-dialog"].open) return;
+    if (event.key === "Escape" && toolsMenu.open) {
+      event.preventDefault();
+      toolsMenu.open = false;
+      toolsMenu.querySelector("summary").focus({ preventScroll: true });
+      return;
+    }
     if (event.key === "Escape") {
       if (composerOpen) {
         event.preventDefault();
@@ -442,7 +457,10 @@ export function createUI(actions = {}) {
     }
     document.querySelectorAll(".panel-context").forEach(element => { element.textContent = applicationName; });
     el["error-notice"].hidden = !text(snapshot.error);
-    el["error-message"].textContent = text(snapshot.error);
+    const errorText = text(snapshot.error);
+    el["error-message"].textContent = /^(Failed to fetch|Load failed|NetworkError.*)$/i.test(errorText)
+      ? "无法连接本机服务" : errorText;
+    el["connection-label"].hidden = Boolean(errorText) || connection === "disconnected";
 
     let [heading, supporting] = STATE_COPY[voiceState];
     if (connection === "connecting") {
@@ -480,9 +498,9 @@ export function createUI(actions = {}) {
     el["main-caption"].textContent = showTranscript ? text(snapshot.caption.assistant) : heading;
     el["main-caption"].classList.toggle("has-transcript", showTranscript);
     el["supporting-caption"].textContent = supporting;
-    const showConnectionDetail = ["connecting", "error"].includes(connection);
-    el["main-caption"].hidden = !showTranscript && !showConnectionDetail;
-    el["supporting-caption"].hidden = !showConnectionDetail;
+    if (connection === "connecting" && !errorText) el["connection-label"].textContent = heading;
+    el["main-caption"].hidden = !showTranscript;
+    el["supporting-caption"].hidden = true;
     const showUser = Boolean(snapshot.settings.captions && isConnected && text(snapshot.caption.user));
     el["user-caption"].hidden = !showUser;
     el["user-caption-text"].textContent = text(snapshot.caption.user);
@@ -513,7 +531,7 @@ export function createUI(actions = {}) {
     renderVoiceSettings();
     updateComposer();
     sound.setState(isConnected ? voiceState : connection === "connecting" ? "thinking" : "idle", isConnected);
-    announce(`${demo ? "演示模式，" : ""}${connectionLabel}${showConnectionDetail ? "。" + heading : ""}`);
+    announce(`${demo ? "演示模式，" : ""}${errorText || (connection === "connecting" ? heading : connectionLabel)}`);
   }
 
   render();

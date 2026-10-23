@@ -32,12 +32,24 @@
     <div id="voice-app" class="voice-shell" data-state="idle" data-mode="live" data-connection="disconnected">
       <header class="top">
         <div class="identity"><span class="brand">Open OS1</span></div>
-        <span id="connection-label" role="status">待命</span>
       </header>
+      <details id="tools-menu" class="tools-menu">
+        <summary aria-label="打开工具菜单" title="工具"><svg class="icon" aria-hidden="true"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></summary>
+        <div class="tools-popover">
+        <div class="call-controls" role="group" aria-label="通话控制">
+          <button id="mic-button" class="call-control" type="button" aria-label="暂停通话" aria-pressed="false" disabled><span class="control-disc"><svg class="icon" aria-hidden="true"><use href="#icon-mic"/></svg></span><span id="mic-label">暂停</span></button>
+          <button id="keyboard-button" class="call-control" type="button" aria-label="显示文字输入" aria-expanded="false" aria-controls="text-composer"><span class="control-disc"><svg class="icon" aria-hidden="true"><use href="#icon-keyboard"/></svg></span><span>键盘</span></button>
+          <button id="sound-button" class="call-control" type="button" aria-label="选择播放设备" aria-haspopup="dialog" aria-controls="settings-dialog"><span class="control-disc"><svg class="icon" aria-hidden="true"><use href="#icon-speaker"/></svg></span><span>音频</span></button>
+          <button id="captions-button" class="call-control" type="button" aria-label="隐藏字幕" aria-pressed="true"><span class="control-disc"><svg class="icon" aria-hidden="true"><use href="#icon-captions"/></svg></span><span>字幕</span></button>
+          <button id="history-button" class="call-control" type="button" aria-label="打开通话记录" aria-haspopup="dialog" aria-controls="history-dialog"><span class="control-disc"><svg class="icon" aria-hidden="true"><use href="#icon-history"/></svg></span><span>记录</span></button>
+          <button id="settings-button" class="call-control" type="button" aria-label="打开声音与连接设置" aria-haspopup="dialog" aria-controls="settings-dialog"><span class="control-disc"><svg class="icon" aria-hidden="true"><use href="#icon-settings"/></svg></span><span>设置</span></button>
+        </div>
+          <button id="mode-button" class="mode-button" type="button"><span id="mode-button-label">试用演示</span></button>
+        </div>
+      </details>
       <main class="scene" id="main-content" aria-label="OS¹ 语音对话">
         <canvas id="sound-canvas" aria-label="开始通话" role="button" tabindex="0"></canvas>
         <p id="mode-notice" class="mode-notice" hidden>演示</p>
-        <div id="error-notice" class="error-notice" role="alert" hidden><p id="error-message"></p><button id="error-settings" class="text-button" type="button">查看设置</button></div>
       </main>
       <footer class="dock">
         <div class="caption-stage cap">
@@ -52,17 +64,12 @@
           <textarea id="message-input" rows="1" placeholder="输入消息…" autocomplete="off"></textarea>
           <button id="send-button" class="send-button" type="submit" aria-label="发送消息" disabled>发送</button>
         </form>
-        <div class="call-controls" role="group" aria-label="通话控制">
-          <button id="mic-button" class="call-control" type="button" aria-label="暂停通话" aria-pressed="false" disabled><span class="control-disc"><svg class="icon" aria-hidden="true"><use href="#icon-mic"/></svg></span><span id="mic-label">暂停</span></button>
-          <button id="keyboard-button" class="call-control" type="button" aria-label="显示文字输入" aria-expanded="false" aria-controls="text-composer"><span class="control-disc"><svg class="icon" aria-hidden="true"><use href="#icon-keyboard"/></svg></span><span>键盘</span></button>
-          <button id="sound-button" class="call-control" type="button" aria-label="选择播放设备" aria-haspopup="dialog" aria-controls="settings-dialog"><span class="control-disc"><svg class="icon" aria-hidden="true"><use href="#icon-speaker"/></svg></span><span>音频</span></button>
-          <button id="captions-button" class="call-control" type="button" aria-label="隐藏字幕" aria-pressed="true"><span class="control-disc"><svg class="icon" aria-hidden="true"><use href="#icon-captions"/></svg></span><span>字幕</span></button>
-          <button id="history-button" class="call-control" type="button" aria-label="打开通话记录" aria-haspopup="dialog" aria-controls="history-dialog"><span class="control-disc"><svg class="icon" aria-hidden="true"><use href="#icon-history"/></svg></span><span>记录</span></button>
-          <button id="settings-button" class="call-control" type="button" aria-label="打开声音与连接设置" aria-haspopup="dialog" aria-controls="settings-dialog"><span class="control-disc"><svg class="icon" aria-hidden="true"><use href="#icon-settings"/></svg></span><span>设置</span></button>
+        <div class="session-status">
+          <span id="connection-label" role="status" hidden>待命</span>
+          <div id="error-notice" class="error-notice" role="alert" hidden><p id="error-message"></p><button id="error-settings" class="text-button" type="button">设置</button></div>
         </div>
         <div class="call-actions">
           <button id="call-button" class="call-button" type="button"><span class="call-disc"><svg class="icon" aria-hidden="true"><use href="#icon-phone"/></svg></span><span id="call-label">开始通话</span></button>
-          <button id="mode-button" class="mode-button" type="button"><span id="mode-button-label">试用演示</span></button>
         </div>
       </footer>
     </div>
