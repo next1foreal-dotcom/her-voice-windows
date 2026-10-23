@@ -5,24 +5,24 @@ import {startupCopy} from '../web/ui.js';
 test('loaded Drama reports preparation and elapsed wait instead of suggesting a download', () => {
   const [heading, supporting] = startupCopy({state: 'starting', tts_backend: 'drama3',
     startup_wait_seconds: 135, tts_process: {ready: true, pool: {model_loaded: true}}});
-  assert.match(heading, /預熱/);
-  assert.match(supporting, /已從本機載入/);
+  assert.match(heading, /预热/);
+  assert.match(supporting, /已从本机加载/);
   assert.match(supporting, /135 秒/);
-  assert.doesNotMatch(supporting, /下載/);
+  assert.doesNotMatch(supporting, /下载/);
 });
 
 test('unloaded native service must not claim the model is loaded', () => {
   const [, supporting] = startupCopy({tts_backend: 'drama3', detail: '正在準備音色',
     tts_process: {ready: true, pool: {model_loaded: false}}});
   assert.match(supporting, /正在準備音色/);
-  assert.doesNotMatch(supporting, /已從本機載入/);
+  assert.doesNotMatch(supporting, /已从本机加载/);
 });
 
 test('other startup stages display actual server detail without inventing a download', () => {
   const [, supporting] = startupCopy({detail: '正在初始化辨識引擎', startup_wait_seconds: 3});
   assert.match(supporting, /正在初始化辨識引擎/);
   assert.match(supporting, /3 秒/);
-  assert.doesNotMatch(supporting, /下載/);
+  assert.doesNotMatch(supporting, /下载/);
 });
 test('loaded Drama retains the current backend preparation phase', () => {
   const [, supporting] = startupCopy({tts_backend: 'drama3',

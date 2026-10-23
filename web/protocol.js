@@ -132,7 +132,7 @@ export class ConversationState {
         message.status = 'complete';
       } else if (kind.endsWith('.failed')) {
         message.status = 'failed';
-        s.error = '這段語音未能辨識，請重試。';
+        s.error = '这段语音未能辨识，请重试。';
       }
       if (this.snapshots.size > 200) this.snapshots.delete(this.snapshots.values().next().value);
       if (id === this.inputItemId) s.caption.user = message.text;
@@ -169,13 +169,13 @@ export class ConversationState {
       if (response.status === 'cancelled' || response.status === 'failed') {
         result.clearAudio = true;
         this.playbackActive = false;
-        if (response.status === 'failed') s.error = '回覆未完成；請檢查模型、API 或連線狀態。';
+        if (response.status === 'failed') s.error = '回复未完成；请检查模型、API 或连接状态。';
       }
-      if (response.status === 'incomplete') s.error = '回覆達到長度限制或未完整生成；可請我接著說。';
+      if (response.status === 'incomplete') s.error = '回复达到长度限制或未完整生成；可请我接着说。';
       if (!this.playbackActive && !s.paused) s.state = 'listening';
       if (!this.playbackActive) this.currentResponseId = null;
     } else if (kind === 'error') {
-      s.error = typeof event.error?.message === 'string' ? event.error.message.slice(0, 350) : '語音服務發生錯誤。';
+      s.error = typeof event.error?.message === 'string' ? event.error.message.slice(0, 350) : '语音服务发生错误。';
       if (!this.playbackActive && !s.paused) s.state = 'listening';
     }
     return result;

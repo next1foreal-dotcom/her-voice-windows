@@ -18,7 +18,7 @@ export function attachProviderSettings({client, baseUrl, fetch: fetcher = global
     el.model.required = value;
     el['model-list'].required = !value;
     el['model-list'].disabled = value;
-    el['model-manual'].textContent = value ? '使用模型列表' : '手動輸入模型';
+    el['model-manual'].textContent = value ? '使用模型列表' : '手动输入模型';
     el['model-manual'].setAttribute('aria-expanded', String(value));
   }
   function renderModels(models, current = el.model.value.trim()) {
@@ -29,15 +29,15 @@ export function attachProviderSettings({client, baseUrl, fetch: fetcher = global
       option.value = id; option.textContent = name; option.disabled = disabled;
       options.push(option);
     };
-    if (!current) add('', models.length ? '請選擇模型' : '請先拉取模型', true);
-    if (current && !models.some(model => model.id === current)) add(current, `${current} · 目前填寫`);
+    if (!current) add('', models.length ? '请选择模型' : '请先拉取模型', true);
+    if (current && !models.some(model => model.id === current)) add(current, `${current} · 当前填写`);
     for (const model of models) add(model.id, model.name === model.id ? model.id : `${model.name} · ${model.id}`);
     el['model-list'].replaceChildren(...options);
     el['model-list'].value = current;
   }
   function invalidateCatalog() {
     renderModels([], el.model.value.trim());
-    catalogMessage('設定已變更，請重新拉取模型。');
+    catalogMessage('设置已变更，请重新拉取模型。');
   }
   async function fetchModels() {
     if (disposed || busy || !loaded || !el.url.reportValidity()) return;
@@ -72,7 +72,7 @@ export function attachProviderSettings({client, baseUrl, fetch: fetcher = global
   async function request(path, method = 'GET', data) {
     if (!token) {
       const response = await fetcher(new URL('api/bootstrap', baseUrl), {cache: 'no-store', signal: events.signal});
-      if (!response.ok) throw new Error('本機服務無法連線，請重新整理頁面。');
+      if (!response.ok) throw new Error('本机服务无法连接，请刷新页面。');
       token = (await response.json()).token;
     }
     const response = await fetcher(new URL(path, baseUrl), {
@@ -80,10 +80,10 @@ export function attachProviderSettings({client, baseUrl, fetch: fetcher = global
       headers: {'X-Voice-Token': token, ...(data ? {'Content-Type': 'application/json'} : {})},
       ...(data ? {body: JSON.stringify(data)} : {}),
     });
-    if (response.status === 404) throw new Error('請重新啟動 HER Voice 本機服務，以載入回答接口設定功能。');
-    if (response.status === 403) { token = ''; throw new Error('設定連線已失效，請重新讀取。'); }
+    if (response.status === 404) throw new Error('请重新启动 HER Voice 本机服务，以加载回答接口设置功能。');
+    if (response.status === 403) { token = ''; throw new Error('设置连接已失效，请重新读取。'); }
     const result = await response.json();
-    if (!response.ok) throw new Error(result.error || `設定失敗（HTTP ${response.status}）。`);
+    if (!response.ok) throw new Error(result.error || `设置失败（HTTP ${response.status}）。`);
     return result;
   }
   function showConfiguration(config) {
@@ -95,21 +95,21 @@ export function attachProviderSettings({client, baseUrl, fetch: fetcher = global
     setManual(false);
     el.key.value = '';
     el.key.type = 'password';
-    el['key-show'].textContent = '顯示';
+    el['key-show'].textContent = '显示';
     el['key-show'].setAttribute('aria-pressed', 'false');
-    el.key.placeholder = config.api_key_configured ? '•••••••• 已儲存；輸入新 Key 可更換' : '貼上此接口的 API Key';
-    el.current.textContent = `${config.provider === 'deepseek' ? 'DeepSeek' : '相容接口'} · ${config.model} · ${config.api_key_configured ? 'Key 已設定' : '未設定 Key'}`;
+    el.key.placeholder = config.api_key_configured ? '???????? 已保存；输入新 Key 可更换' : '贴上此接口的 API Key';
+    el.current.textContent = `${config.provider === 'deepseek' ? 'DeepSeek' : '相容接口'} · ${config.model} · ${config.api_key_configured ? 'Key 已设置' : '未设置 Key'}`;
   }
   async function load(force = false) {
     if (disposed || busy || (loaded && !force)) return;
     let autoFetch = false;
-    setBusy(true); message('正在讀取設定…');
+    setBusy(true); message('正在读取设置…');
     try {
       token = '';
       const config = await request('api/provider');
       catalog = [];
       showConfiguration(config);
-      catalogMessage('從目前接口讀取可用模型。');
+      catalogMessage('从当前接口读取可用模型。');
       autoFetch = config.api_key_configured;
       loaded = true; message('');
     } catch (error) { if (!disposed) message(error.message, true); }
@@ -122,7 +122,7 @@ export function attachProviderSettings({client, baseUrl, fetch: fetcher = global
   async function submit(testOnly) {
     if (busy || !el.form.reportValidity()) return;
     const data = payload();
-    setBusy(true); message(testOnly ? '正在測試連線…' : '正在儲存並套用…');
+    setBusy(true); message(testOnly ? '正在测试连接…' : '正在保存并应用…');
     try {
       if (testOnly) {
         const result = await request('api/provider/test', 'POST', data);
@@ -135,9 +135,9 @@ export function attachProviderSettings({client, baseUrl, fetch: fetcher = global
         if (potentiallyUnchanged && !result.unchanged) await client.disconnect();
         if (!disposed) {
           showConfiguration(result);
-          message(result.unchanged ? '設定未變，已儲存；無需重新載入模型。' : '已儲存並套用。下次開始對話會使用此設定。');
+          message(result.unchanged ? '设置未变，已保存；无需重新加载模型。' : '已保存并应用。下次开始通话会使用此设置。');
           try { await client.refreshHealth(); }
-          catch { message('已儲存。請重新整理頁面以更新服務狀態。'); }
+          catch { message('已保存。请刷新页面以更新服务状态。'); }
         }
       }
     } catch (error) { if (!disposed) message(error.message, true); }
@@ -165,17 +165,17 @@ export function attachProviderSettings({client, baseUrl, fetch: fetcher = global
     el.url.readOnly = deepseek;
     el.model.value = deepseek ? 'deepseek-flash' : '';
     setManual(false); invalidateCatalog();
-    el.key.value = ''; el.key.placeholder = '請填寫所選接口的 API Key';
+    el.key.value = ''; el.key.placeholder = '请填写所选接口的 API Key';
   });
   listen(el['key-show'], 'click', () => {
     const show = el.key.type === 'password';
     el.key.type = show ? 'text' : 'password';
-    el['key-show'].textContent = show ? '隱藏' : '顯示';
+    el['key-show'].textContent = show ? '隐藏' : '显示';
     el['key-show'].setAttribute('aria-pressed', String(show));
   });
   listen(document.getElementById('settings-dialog'), 'close', () => {
     el.key.value = ''; el.key.type = 'password';
-    el['key-show'].textContent = '顯示'; el['key-show'].setAttribute('aria-pressed', 'false');
+    el['key-show'].textContent = '显示'; el['key-show'].setAttribute('aria-pressed', 'false');
   });
   return {load, destroy() { disposed = true; el.key.value = ''; token = ''; events.abort(); }};
 }

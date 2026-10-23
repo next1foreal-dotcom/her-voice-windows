@@ -18,12 +18,12 @@ const INITIAL = {
 };
 
 const STATE_COPY = {
-  idle: ["準備好聽你說。", "從一個念頭，開始一段對話。"],
-  listening: ["我在聽，請說。", "可以自然說話，也可以隨時插話。"],
-  thinking: ["讓我想一想。", "正在生成回覆。"],
-  speaking: ["正在回覆你。", "你可以直接開口打斷我。"],
-  paused: ["對話已暫停。", "已完成的對話會保留；未說完的內容，恢復後請重說。"],
-  interrupted: ["我在聽，你繼續。", "已停止播放，請繼續說。"],
+  idle: ["准备好听你说。", "从一个念头，开始一段对话。"],
+  listening: ["我在听，请说。", "可以自然说话，也可以随时插话。"],
+  thinking: ["让我想一想。", "正在生成回复。"],
+  speaking: ["正在回复你。", "你可以直接开口打断我。"],
+  paused: ["对话已暂停。", "已完成的对话会保留；未说完的内容，恢复后请重说。"],
+  interrupted: ["我在听，你继续。", "已停止播放，请继续说。"],
 };
 
 function text(value) {
@@ -32,10 +32,10 @@ function text(value) {
 
 export function startupCopy(engine = {}) {
   const loadedDrama = engine.tts_backend === 'drama3' && engine.tts_process?.pool?.model_loaded === true;
-  const heading = loadedDrama ? '正在預熱語音引擎。' : '正在準備語音服務。';
+  const heading = loadedDrama ? '正在预热语音引擎。' : '正在准备语音服务。';
   let supporting = text(engine.detail) || (loadedDrama
-    ? 'Drama 3 已從本機載入，正在準備首段語音與會話。'
-    : '正在初始化本機語音引擎。');
+    ? 'Drama 3 已从本机加载，正在准备首段语音与会话。'
+    : '正在初始化本机语音引擎。');
   if (Number.isFinite(engine.startup_wait_seconds)) {
     supporting += ` 已等待 ${Math.max(0, Math.floor(engine.startup_wait_seconds))} 秒。`;
   }
@@ -133,8 +133,8 @@ export function createUI(actions = {}) {
     const hasText = el["message-input"].value.trim().length > 0;
     el["send-button"].disabled = !connected() || snapshot.paused || !hasText;
     el["composer-hint"].textContent = snapshot.paused
-      ? "先恢復對話，再送出訊息"
-      : connected() ? "Enter 送出 · Shift + Enter 換行" : "開始對話後即可送出訊息";
+      ? "先恢复对话，再发送消息"
+      : connected() ? "Enter 发送 · Shift + Enter 换行" : "开始通话后即可发送消息";
     const input = el["message-input"];
     input.style.height = "auto";
     input.style.height = `${Math.min(input.scrollHeight, 110)}px`;
@@ -160,7 +160,7 @@ export function createUI(actions = {}) {
     el["text-composer"].hidden = !open;
     el["voice-app"].dataset.composer = String(open);
     el["keyboard-button"].setAttribute("aria-expanded", String(open));
-    el["keyboard-button"].setAttribute("aria-label", open ? "收起文字輸入" : "顯示文字輸入");
+    el["keyboard-button"].setAttribute("aria-label", open ? "收起文字输入" : "显示文字输入");
     el["interrupt-button"].querySelector(".key-hint").hidden = open;
     if (open) {
       updateComposer();
@@ -183,11 +183,11 @@ export function createUI(actions = {}) {
     const value = el["message-input"].value.trim();
     if (!value) return;
     if (!connected()) {
-      announce("請先開始對話，再送出訊息。");
+      announce("请先开始通话，再发送消息。");
       return;
     }
     if (snapshot.paused) {
-      announce("目前已暫停，請先恢復對話再送出訊息。");
+      announce("当前已暂停，请先恢复对话再发送消息。");
       return;
     }
     invoke("onSend", value);
@@ -281,14 +281,14 @@ export function createUI(actions = {}) {
     if (signature !== deviceSignature) {
       deviceSignature = signature;
       for (const [kind, id, defaultLabel] of [
-        ["audioinput", "mic-device", "系統預設麥克風"],
-        ["audiooutput", "output-device", "系統預設揚聲器"],
+        ["audioinput", "mic-device", "系统默认麦克风"],
+        ["audiooutput", "output-device", "系统默认扬声器"],
       ]) {
         const options = [new Option(defaultLabel, "")];
         let number = 0;
         for (const device of devices.filter((item) => item.kind === kind && item.deviceId && item.deviceId !== "default")) {
           number += 1;
-          options.push(new Option(text(device.label) || `${kind === "audioinput" ? "麥克風" : "播放裝置"} ${number}`, device.deviceId));
+          options.push(new Option(text(device.label) || `${kind === "audioinput" ? "麦克风" : "播放设备"} ${number}`, device.deviceId));
         }
         el[id].replaceChildren(...options);
       }
@@ -296,13 +296,13 @@ export function createUI(actions = {}) {
     for (const [key, id] of [["micDeviceId", "mic-device"], ["outputDeviceId", "output-device"]]) {
       const value = text(snapshot.settings[key]);
       if (value && !Array.from(el[id].options).some((option) => option.value === value)) {
-        el[id].add(new Option("所選裝置（目前未列出）", value));
+        el[id].add(new Option("所选设备（当前未列出）", value));
       }
       el[id].value = value;
     }
     el["device-help"].textContent = snapshot.mode === "demo"
-      ? "示範模式不會要求麥克風權限。真實連線時會列出可用裝置。"
-      : devices.length ? "裝置由目前瀏覽器提供；變更會套用至目前對話。" : "開始對話並允許麥克風後，會顯示可用裝置。";
+      ? "演示模式不会要求麦克风权限。真实连接时会列出可用设备。"
+      : devices.length ? "设备由当前浏览器提供；变更会应用至当前对话。" : "开始通话并允许麦克风后，会显示可用设备。";
   }
 
   function renderHistory() {
@@ -335,7 +335,7 @@ export function createUI(actions = {}) {
       }
       row.dataset.role = message.role;
       row.querySelector(".message-role").textContent = message.role === "user" ? "你" : "HER";
-      const statusLabels = { interrupted: "已打斷", cancelled: "已停止", failed: "未完成", streaming: message.role === "user" ? "辨識中" : "回覆中", partial: "辨識中" };
+      const statusLabels = { interrupted: "已打断", cancelled: "已停止", failed: "未完成", streaming: message.role === "user" ? "辨识中" : "回复中", partial: "辨识中" };
       row.querySelector(".message-status").textContent = statusLabels[message.status] || "";
       row.querySelector(".message-text").textContent = text(message.text);
       fragment.append(row);
@@ -425,60 +425,60 @@ export function createUI(actions = {}) {
     el["voice-app"].dataset.connection = connection;
     el["voice-app"].dataset.state = voiceState;
     const connectionLabels = demo
-      ? { disconnected: "示範待命", connecting: "準備示範", connected: "示範演練", error: "示範中斷" }
-      : { disconnected: "未連線", connecting: "連線中", connected: "已連線", error: "連線中斷" };
-    const connectionLabel = paused && isConnected ? demo ? "示範已暫停" : "已暫停" : connectionLabels[connection];
-    const stateLabels = {idle: "待命", listening: "聆聽", thinking: "思考", speaking: "說話", interrupted: "已打斷", paused: "已暫停"};
-    el["connection-label"].textContent = isConnected ? stateLabels[voiceState] : connection === "disconnected" ? "待命" : connectionLabel;
-    el["sound-canvas"].setAttribute("aria-label", snapshot.voiceAdmin?.busy ? "正在套用聲音設定" : connection === "connecting" ? "取消連線" : !isConnected ? "開始對話" : paused ? "恢復對話" : ["thinking", "speaking"].includes(voiceState) ? "打斷回覆" : "暫停對話");
+      ? { disconnected: "演示待命", connecting: "准备演示", connected: "演示演练", error: "演示中断" }
+      : { disconnected: "未连接", connecting: "连接中", connected: "已连接", error: "连接中断" };
+    const connectionLabel = paused && isConnected ? demo ? "演示已暂停" : "已暂停" : connectionLabels[connection];
+    const stateLabels = {idle: "待命", listening: "正在聆听", thinking: "正在思考", speaking: "正在回复", interrupted: "已打断", paused: "已暂停"};
+    el["connection-label"].textContent = isConnected ? stateLabels[voiceState] : connection === "disconnected" ? "准备通话" : connectionLabel;
+    el["sound-canvas"].setAttribute("aria-label", snapshot.voiceAdmin?.busy ? "正在应用声音设置" : connection === "connecting" ? "取消连接" : !isConnected ? "开始通话" : paused ? "恢复对话" : ["thinking", "speaking"].includes(voiceState) ? "打断回复" : "暂停对话");
     el["mode-notice"].hidden = !demo;
-    el["mode-notice"].textContent = "示範模式 · 協定演練／測試音，不使用麥克風或 API";
-    el["mode-button-label"].textContent = demo ? "切回真實連線" : "試用示範";
-    el["mode-button"].setAttribute("aria-label", demo ? "切換至真實語音連線" : "切換至示範模式，不使用麥克風或 API");
+    el["mode-notice"].textContent = "演示模式 · 协议演练／测试音，不使用麦克风或 API";
+    el["mode-button-label"].textContent = demo ? "切回真实连接" : "试用演示";
+    el["mode-button"].setAttribute("aria-label", demo ? "切换至真实语音连接" : "切换至演示模式，不使用麦克风或 API");
     const applicationName = text(snapshot.health?.app_name) || "HER Voice";
     const genericProvider = snapshot.health?.provider === "openai-compatible";
     document.title = applicationName;
     const wordmark = document.querySelector(".wordmark");
     if (wordmark) {
-      wordmark.setAttribute("aria-label", `${applicationName} 首頁`);
+      wordmark.setAttribute("aria-label", `${applicationName} 首页`);
       wordmark.querySelector(".wordmark-her").textContent = applicationName === "HER Voice" ? "HER" : applicationName;
       wordmark.querySelector(".wordmark-voice").hidden = applicationName !== "HER Voice";
       wordmark.querySelector(".wordmark-divider").hidden = applicationName !== "HER Voice";
     }
     document.querySelectorAll(".panel-context").forEach(element => { element.textContent = applicationName; });
-    el["architecture-label"].textContent = demo ? "示範演練 · 測試音訊" : genericProvider ? "本機聽說 · 應用 Agent 對話" : "本機聽說 · DeepSeek 對話";
+    el["architecture-label"].textContent = demo ? "演示演练 · 测试音频" : genericProvider ? "本机听说 · 应用 Agent 对话" : "本机听说 · DeepSeek 对话";
     el["error-notice"].hidden = !text(snapshot.error);
     el["error-message"].textContent = text(snapshot.error);
 
     let [heading, supporting] = STATE_COPY[voiceState];
     if (connection === "connecting") {
-      heading = demo ? "正在準備示範。" : "正在連接語音服務。";
-      supporting = demo ? "這是協定演練，不會辨識你的聲音。" : "若瀏覽器詢問，請允許麥克風。";
+      heading = demo ? "正在准备演示。" : "正在连接语音服务。";
+      supporting = demo ? "这是协议演练，不会辨识你的声音。" : "若浏览器询问，请允许麦克风。";
       if (!demo && snapshot.startupStage === 'microphone') {
-        heading = '語音服務已就緒。';
-        supporting = '正在啟用選定的麥克風，請確認輸入裝置與頁面權限。';
+        heading = '语音服务已就绪。';
+        supporting = '正在启用选定的麦克风，请确认输入设备与页面权限。';
       } else if (!demo && snapshot.health?.engine?.state === "starting") {
         [heading, supporting] = startupCopy(snapshot.health.engine);
       }
     } else if (connection === "error") {
-      heading = "暫時無法連線。";
-      supporting = "檢查本機服務後，重新開始對話。";
+      heading = "暂时无法连接。";
+      supporting = "检查本机服务后，重新开始通话。";
     } else if (!isConnected) {
-      heading = demo ? "先感受對話的節奏。" : STATE_COPY.idle[0];
-      supporting = demo ? "示範會顯示字幕並播放測試音。" : STATE_COPY.idle[1];
+      heading = demo ? "先感受对话的节奏。" : STATE_COPY.idle[0];
+      supporting = demo ? "演示会显示字幕并播放测试音。" : STATE_COPY.idle[1];
     } else if (!snapshot.settings.bargeIn && voiceState === "speaking") {
-      supporting = "正在播放回覆。";
+      supporting = "正在播放回复。";
     } else if (!snapshot.settings.bargeIn && voiceState === "listening") {
-      supporting = "說出你的想法，我會在你說完後回應。";
+      supporting = "说出你的想法，我会在你说完后回应。";
     }
     if (demo && isConnected) {
       const demoCopy = {
-        idle: ["示範已準備好。", "輸入文字，體驗字幕與測試音訊。"],
-        listening: ["輸入一句話，開始演練。", "這裡只演練字幕、播放與打斷流程。"],
-        thinking: ["正在準備示範回覆。", "示範內容與測試音不來自語音模型。"],
-        speaking: ["正在播放示範。", "點擊「打斷回覆」，試試中途接話。"],
-        interrupted: ["示範已打斷。", "可輸入下一句，或繼續操作控制列。"],
-        paused: ["示範已暫停。", "已完成的文字會保留；恢復後可以繼續輸入。"],
+        idle: ["演示已准备好。", "输入文字，体验字幕与测试音频。"],
+        listening: ["输入一句话，开始演练。", "这里只演练字幕、播放与打断流程。"],
+        thinking: ["正在准备演示回复。", "演示内容与测试音不来自语音模型。"],
+        speaking: ["正在播放演示。", "点击「打断回复」，试试中途接话。"],
+        interrupted: ["演示已打断。", "可输入下一句，或继续操作控制列。"],
+        paused: ["演示已暂停。", "已完成的文字会保留；恢复后可以继续输入。"],
       };
       [heading, supporting] = demoCopy[voiceState] || demoCopy.idle;
     }
@@ -495,38 +495,38 @@ export function createUI(actions = {}) {
     el["interrupt-button"].hidden = !isConnected || !["thinking", "speaking"].includes(voiceState);
     const firstAudio = snapshot.metrics.firstAudioMs;
     const timing = snapshot.metrics.server;
-    const timingParts = timing ? [['辨識', timing.sttMs], ['回答首字', timing.llm_ttftMs], ['回答生成全程', timing.llmMs], ['語音合成首段', timing.tts_ttfaMs],
-      ['停頓判定', timing.vad_decisionMs], ['等待續說', timing.holdMs], ['伺服器首音', timing.e2eMs]] : [];
+    const timingParts = timing ? [['辨识', timing.sttMs], ['回答首字', timing.llm_ttftMs], ['回答生成全程', timing.llmMs], ['语音合成首段', timing.tts_ttfaMs],
+      ['停顿判定', timing.vad_decisionMs], ['等待续说', timing.holdMs], ['服务器首音', timing.e2eMs]] : [];
     el["latency-label"].title = timingParts.filter(([, ms]) => Number.isFinite(ms)).map(([name, ms]) => `${name} ${(ms / 1000).toFixed(2)} 秒`).join('；');
     el["latency-label"].hidden = !isConnected || !Number.isFinite(firstAudio) || firstAudio < 0;
-    el["latency-label"].textContent = Number.isFinite(firstAudio) && firstAudio >= 0 ? `事件至播放約 ${(firstAudio / 1000).toFixed(2)} 秒` : "";
+    el["latency-label"].textContent = Number.isFinite(firstAudio) && firstAudio >= 0 ? `事件至播放约 ${(firstAudio / 1000).toFixed(2)} 秒` : "";
 
     el["mic-button"].disabled = !isConnected;
     el["mic-button"].setAttribute("aria-pressed", String(paused));
-    el["mic-button"].setAttribute("aria-label", paused ? "恢復麥克風" : "暫停麥克風");
-    el["mic-label"].textContent = paused ? "已暫停" : "麥克風";
+    el["mic-button"].setAttribute("aria-label", paused ? "继续通话" : "暂停通话");
+    el["mic-label"].textContent = paused ? "继续" : "暂停";
     setIcon(el["mic-button"], paused ? "mic-off" : "mic");
     el["captions-button"].setAttribute("aria-pressed", String(Boolean(snapshot.settings.captions)));
-    el["captions-button"].setAttribute("aria-label", snapshot.settings.captions ? "隱藏字幕" : "顯示字幕");
+    el["captions-button"].setAttribute("aria-label", snapshot.settings.captions ? "隐藏字幕" : "显示字幕");
     el["call-button"].classList.toggle("is-active", isConnected);
     el["call-button"].setAttribute("aria-busy", String(connection === "connecting"));
     el["call-button"].disabled = Boolean(snapshot.voiceAdmin?.busy);
-    el["call-label"].textContent = connection === "connecting" ? "取消連線" : isConnected ? "結束對話" : demo ? "開始示範" : "開始對話";
+    el["call-label"].textContent = connection === "connecting" ? "取消呼叫" : isConnected ? "挂断" : demo ? "开始演示" : "开始通话";
     setIcon(el["call-button"], isConnected || connection === "connecting" ? "end" : "phone");
     el["captions-setting"].checked = Boolean(snapshot.settings.captions);
     el["barge-in-setting"].checked = Boolean(snapshot.settings.bargeIn);
-    el["service-mode"].textContent = demo ? "示範協定演練" : "真實連線";
-    const engineLabels = { ready: "已就緒", starting: "載入中", failed: "啟動失敗", stopped: "尚未啟動", stopping: "停止中" };
-    el["service-engine"].textContent = engineLabels[snapshot.health?.engine?.state] || "尚未檢查";
-    el["service-profile"].textContent = text(snapshot.health?.profile) || "尚未檢查";
+    el["service-mode"].textContent = demo ? "演示协议演练" : "真实连接";
+    const engineLabels = { ready: "已就绪", starting: "加载中", failed: "启动失败", stopped: "尚未启动", stopping: "停止中" };
+    el["service-engine"].textContent = engineLabels[snapshot.health?.engine?.state] || "尚未检查";
+    el["service-profile"].textContent = text(snapshot.health?.profile) || "尚未检查";
     const providerReady = snapshot.health?.provider_ready ?? snapshot.health?.api_key_configured;
-    el["service-key"].textContent = providerReady === true ? "設定已齊備，待實際連線" : providerReady === false ? "尚未設定" : "尚未檢查";
+    el["service-key"].textContent = providerReady === true ? "设置已齐备，待实际连接" : providerReady === false ? "尚未设置" : "尚未检查";
     renderDevices();
     renderHistory();
     renderVoiceSettings();
     updateComposer();
     sound.setState(isConnected ? voiceState : connection === "connecting" ? "thinking" : "idle", isConnected);
-    announce(`${demo ? "示範模式，" : ""}${connectionLabel}。${heading}`);
+    announce(`${demo ? "演示模式，" : ""}${connectionLabel}。${heading}`);
   }
 
   render();
@@ -553,9 +553,9 @@ export function createUI(actions = {}) {
 const FIT={"R":246.47314884694768,"H":56.23224548129997,"ex":0.19488482263878898,"K":4.066937804453259,"t0":1.9117729371420353,"w":-10.863007899287409,"W":21.099525550778324,"b0":1.3352040524110054,"b1":-1.0329263981839685,"amin":0.03466537834674127,"amax":0.8056924170245459,"contrast":-0.3208459500996237,"ringR":98.5,"ringW":17,"ringDY":45};
 const FIELD={"spatial":12,"temporal":4,"cx":[-0.141632,-1.216982,0.029258,1.222655,0.484328,3.487129,-0.371835,0.053386,0.132915,0.826048,0.050531,-0.145336,-0.058419,0.354745,0.032107,0.014517,-0.007036,-0.180696,-0.020551,-0.003359,-0.008739,-0.094189,0.018478,-0.019312,0.006058,0.064042,-0.185681,0.061068,0.372894,0.356778,0.069031,1.265134,-0.121621,0.162958,-0.101676,-0.566661,-0.028936,0.009162,-0.001069,0.109015,0.011171,0.001238,-0.008324,0.010819,-0.004029,0.002856,-0.00382,-0.011415,0.002993,-8e-06,-0.16299,-0.224955,0.276685,0.067597,3.606705,-0.197003,-0.034662,0.194538,0.146337,-0.283976,-0.059301,0.028041,0.195701,-0.038042,-0.070808,0.008037,0.018792,-0.008042,-0.01849,0.017447,-0.004879,-0.004037,0.003324,-0.00711,-0.004635,0.017893,3.053546,-0.215373,-0.117168,-0.347075,-1.478214,0.240574,-0.250134,-0.062399,-0.865301,0.0216,0.021895,-0.008058,-0.005288,0.013419,0.035049,0.043431,-0.012569,0.00712,0.01807,0.000698,0.020101,-0.004813,0.006742,-0.005219,1.188253,-0.272179,0.220016,-0.984184,0.050889,0.367453,0.099848,-1.232392,0.068778,0.153123,-0.023424,0.061513,-0.04207,-0.038895,0.02062,0.161292,-0.007918,0.003776,-0.013101,0.012811,-0.000794,0.000748,0.005759,-0.008373,-0.000265,0.199958,0.047391,0.951945,-0.145109,-0.113065,-0.017591,0.931573,-0.05766,-0.103744,0.020019,0.112397,0.0269,-0.019922,0.01295,-0.035828,0.008435,-0.008021,-0.00161,0.002156,0.007394,-0.000277,0.002027,0.000696,-0.003155,0.000274,-0.039125,-0.037606,-0.20288,0.06566,-0.097803,0.089125,-0.130916,-0.046617,-0.32435,0.148826,0.032377,-0.008416,-0.155435,0.01854,0.045432,-0.007926,-0.005311,0.00447,0.011772,0.000712,0.001951,0.000308,-0.001637,0.000806,-0.003431,-0.012071,-0.153746,0.077414,0.043872,0.12176,-0.126792,-0.019149,0.112381,0.057867,0.245122,-0.005012,0.029599,-0.022668,0.155639,-0.003442,-0.041508,-0.025943,-0.004922,-0.005939,-0.018354,0.003405,-0.010722,0.006664,-0.001135,0.004745,0.206081,-0.023477,-0.031991,-0.004973,-0.018334,0.009307,-0.053924,0.005198,0.004197,-0.062497,-0.00712,0.044703,0.004151,-0.028628,0.005445,-0.007017,0.00015,0.001737,-0.002258,-0.030436,0.005446,-0.000794,0.001062,0.001617,-0.003763],"cy":[-0.309524,1.135516,-0.15516,0.154266,0.049349,-1.56104,-0.162804,0.244701,-0.059599,0.14401,0.11897,0.003167,0.017298,0.083994,-0.014589,-0.029782,-0.00234,0.086281,-0.017739,0.010659,0.003017,-0.067634,0.011932,-0.009784,-0.000567,0.503282,-0.069362,1.769806,-0.734473,0.144803,0.087024,-0.568537,0.066969,-0.016957,0.092263,0.064508,0.094422,-0.003315,-0.035066,0.144434,-0.031401,-0.021459,-0.003563,-0.017919,0.008243,0.015856,0.003194,-0.029855,-0.00206,-0.003159,0.31312,-0.341195,-0.494155,-0.44616,1.826967,0.224702,-0.17629,0.20985,1.908321,0.163344,0.283494,-0.022614,-1.446551,-0.050105,-0.164049,-0.042326,0.320979,-0.014107,0.033987,0.044579,0.025529,0.005387,0.00492,-0.026106,-0.028856,0.390639,0.427858,0.190218,0.041805,0.264822,0.353913,0.074793,-0.393338,-0.115156,-0.318957,-0.067242,-0.046572,0.048299,0.028911,0.009363,0.053598,-0.02099,0.001883,0.009165,-0.01317,-0.0017,-0.047221,-0.005351,0.005178,0.003511,1.221777,-0.175051,-0.040162,-0.037894,-0.177989,0.147046,-0.073862,-1.127815,0.059665,0.008628,0.043436,0.288572,-0.001637,-0.013049,-0.051773,0.062702,-0.014724,0.01885,0.026932,-0.108303,0.011873,-0.004906,-0.004234,0.060935,-0.004917,0.122165,-0.08785,0.620184,0.11848,-0.311574,0.154782,0.36633,-0.118989,0.054537,-0.128909,-0.499782,-0.03731,0.074644,0.031089,0.024409,0.023377,-0.042019,0.007212,-1.5e-05,-0.006201,0.013354,-0.00237,0.04505,-0.001989,-0.001137,-0.054291,0.090575,-0.212576,0.053469,-0.561302,-0.082004,-0.103248,-0.047809,0.073528,-0.101783,0.172959,-0.005595,0.073284,0.037695,-0.018967,0.029275,-0.055572,0.013131,0.004324,-0.010115,0.05567,-0.002637,-0.008009,0.001303,-0.039204,-0.154002,0.214781,-0.030752,-0.013326,0.041697,-0.415746,-0.000322,0.143636,-0.029977,-0.123385,0.014988,0.011479,-0.052865,0.141988,-0.004713,-0.015966,0.031673,0.023341,-0.00573,0.001326,0.002824,-0.023071,0.00257,-0.001744,-0.004567,0.007186,-0.018303,0.006069,-0.034296,-0.030447,0.05,-0.004742,-0.03798,0.030502,0.012056,0.027087,0.062713,-0.002976,-0.035444,0.015206,0.039432,-0.008164,-0.002136,-0.012852,-0.02225,0.006458,0.006297,0.001065,0.001223,-0.002651],"cw":[2.477207,-0.070361,0.080545,-0.031339,-0.015547,-0.029435,0.126606,-0.004031,0.001489,-0.008455,0.06,-0.005059,0.01104,-0.002184,0.00151,-0.003992,0.002126,-0.00261,-0.004624,0.000784,-0.001779,0.003753,0.010018,0.000364,0.00222,0.030178,0.265007,-0.016908,0.057016,0.006479,0.080714,0.006653,0.012541,-0.016222,-0.050609,0.00339,-0.005029,-0.029123,0.014156,-0.003955,0.002081,0.005694,-0.003337,0.002531,0.000772,-0.002576,0.000345,-0.000403,0.000184,0.000996,-0.080184,-0.013324,0.069427,-0.058824,-0.021679,0.007121,0.073657,-0.056032,-0.01218,-0.00806,2.9e-05,-0.056838,0.00796,-0.010193,0.023044,0.00107,-0.00074,0.001458,-0.000444,-0.000558,0.00149,0.002405,0.003247,0.000278,0.000163,0.031423,-0.154249,-0.015806,0.024348,-0.035134,0.113282,-0.31444,-0.035479,0.030375,-0.031219,0.132163,-0.005404,-0.00499,0.009473,-0.059593,0.01782,-0.003788,0.002148,0.01803,-0.005194,0.004482,0.000828,-0.004051,-0.001104,-0.001895,0.01777,-0.118529,-0.019857,0.072029,-0.354427,-0.052303,0.010097,-0.064876,0.213788,0.017362,-0.014152,0.035529,-0.081304,-0.010069,0.01146,-0.018088,0.014334,0.001313,-0.008052,0.00737,-0.003959,-0.003037,0.002382,-0.001219,0.000799,0.001344,0.012446,-0.000593,0.007036,0.045149,-0.037074,-0.005869,-0.014162,0.006966,0.010765,0.002732,0.001339,0.017521,0.037377,0.004276,0.006253,-0.004609,-0.012028,-0.002975,-0.002031,0.002135,0.005429,0.001747,4e-06,0.0011,-0.002614,-0.018161,0.007739,0.008169,-0.007923,0.024726,0.024379,0.054188,0.020665,-0.004025,-0.008634,0.035117,0.002448,0.001369,-0.016246,-0.015133,-0.008089,-0.001294,0.001666,0.011893,0.001915,-0.000526,-0.002879,-0.006414,0.000173,0.04229,0.014805,0.008085,0.009528,-0.026442,-0.014638,0.030937,-0.031797,-0.004622,-0.009067,0.028206,0.042509,0.02243,0.006167,-0.013712,-0.034407,-0.015808,0.001473,-0.002161,0.010671,0.007546,-0.00413,0.005283,-0.004722,-0.004324,-0.01914,-0.017142,-0.020418,-0.008558,0.011505,0.005037,-0.0077,0.019348,0.012957,0.028512,0.028149,-0.008631,-0.020777,-0.029298,-0.026135,0.005424,0.003242,0.019388,0.011752,-0.004287,0.005001,-0.005782,-0.004685,0.001333,-0.003554],"ca":[-1.186474,0.013877,0.00324,-0.116586,0.011761,-0.017141,0.000252,0.300225,0.009731,0.004602,0.007164,-0.076058,0.005019,-0.007753,-0.003781,0.014425,0.000895,-0.000891,-0.009454,0.011822,-0.007114,0.012887,0.013504,-0.008568,0.003286,0.016115,0.062567,0.049663,0.024615,0.364397,-0.01809,0.030171,-0.003617,0.177569,-0.005669,-0.052255,0.003837,-0.280289,-0.004731,-0.004323,0.005421,0.215109,-0.006579,0.013475,-0.007386,-0.114482,0.000166,-0.002346,0.004463,0.04136,0.025687,0.014554,0.946443,0.048548,-0.141746,0.012017,0.668901,0.002529,-0.041398,-0.013227,-0.416884,0.003263,0.030685,-0.005833,0.243355,0.006924,0.009211,0.006108,-0.138605,-0.004327,-0.00586,-0.004537,0.055497,0.010834,-6.1e-05,0.156186,-0.104619,0.018483,-0.014087,0.005326,0.099562,-0.050172,-0.144237,0.013104,0.055325,0.020941,0.01574,1.1e-05,-0.019981,-0.029922,-0.018371,-0.016319,-0.005898,0.007578,0.000487,0.011545,-0.002744,-0.005075,0.016754,-0.000575,-0.012313,-0.139995,0.016535,0.02235,-0.15255,0.118477,0.000843,0.02774,0.04806,0.086719,-0.017394,0.00322,-0.018242,-0.07253,0.019381,-0.029845,0.00492,0.040382,-0.013731,0.012718,0.003646,-0.006092,0.004915,0.002878,0.003359,-0.001233,-0.083055,0.049958,-0.021721,-0.069849,0.037063,0.060593,-0.002111,-0.050336,0.032457,0.006766,0.020634,0.017218,0.007966,-0.003456,-0.000816,-0.009097,-0.002205,-0.004346,-0.005981,0.007244,0.002312,-0.003671,0.003001,-0.003167,0.024714,-0.020623,-0.056302,0.019258,0.070879,0.022492,-0.07294,-0.011595,0.000118,0.000422,0.000753,-0.003618,-0.043893,0.006921,0.004277,-0.01254,0.005211,-0.002625,0.001132,-0.00279,0.006289,0.00037,-0.001186,-0.000511,-0.005219,0.011039,0.056602,-0.006506,-0.026958,-0.049444,-0.035736,0.029873,-0.012146,-0.004196,-0.061719,0.008924,0.038083,0.019906,0.024009,0.005203,-0.029998,-0.017907,0.016536,0.005673,0.013092,0.00802,-0.010698,3e-05,-0.010294,-0.003361,-0.026191,-0.000676,-0.026831,-0.021287,0.060649,0.009999,0.002833,0.036799,0.027065,0.010662,0.039231,0.003231,-0.020184,-0.033391,-0.031307,0.012536,-0.001561,0.019172,0.013809,-0.003026,-0.001548,-0.004968,-0.001639,-0.00342,-0.001332]};
 const BG=[0xDC/255,0x5C/255,0x35/255]; // #DC5C35 固定
-const INK=[1.0,0.871,0.769];            // 暖象牙 #FFDEC4（原片圓環實測）
+const INK=[1.0,0.871,0.769];            // 暖象牙 #FFDEC4（原片圆环实测）
 const STATES=['idle','listening','thinking','speaking','interrupted'];
-const TARGET={ // 各狀態目標；所有量都經彈簧平滑，可中途改狀態
+const TARGET={ // 各状态目标；所有量都经弹簧平滑，可中途改状态
   idle:       {m:0,spd:1.00,hm:1.00,rip:0,   pinch:0, lvl:0},
   listening:  {m:0,spd:0.55,hm:0.82,rip:0.35,pinch:0, lvl:1},
   thinking:   {m:1,spd:1.00,hm:1.00,rip:0,   pinch:0, lvl:0},
@@ -622,7 +622,7 @@ class OS1Ribbon{
     const w=Math.max(1,Math.round((r.width||this.cv.width)*dpr)),h=Math.max(1,Math.round((r.height||this.cv.height)*dpr));
     if(this.cv.width!==w||this.cv.height!==h){this.cv.width=w;this.cv.height=h}
     const cw=w/dpr,ch=h/dpr;
-    // 桌面 1920×1080 → 1:1 原片比例；窄螢幕保證絲帶約佔 72% 寬
+    // 桌面 1920×1080 → 1:1 原片比例；窄屏幕保证丝带约占 72% 宽
     this.scale=Math.min(cw*0.72/560,ch*0.42/330,Math.max(cw/1920,ch/1080))*dpr;
     if(this.opts.scale)this.scale=this.opts.scale*dpr;
     this.dpr=dpr;
@@ -633,7 +633,7 @@ class OS1Ribbon{
     const prev=this.state;this.state=s;this._emit('state',{state:s,prev})}
   setLevel(v){this.level=Math.max(0,Math.min(1,+v||0))}
   get progress(){return {m:this.sp.m.v,spd:this.sp.spd.v,hm:this.sp.hm.v,pinch:this.sp.pinch.v}}
-  /* 推進時間 dt 秒並繪製 */
+  /* 推进时间 dt 秒并绘制 */
   tick(dt){
     dt=Math.min(Math.max(dt,0),1/15);const T=TARGET[this.state];
     this.lvS+=(this.level*T.lvl-this.lvS)*(1-Math.exp(-dt*16));
@@ -775,7 +775,7 @@ class OS1Ribbon{
     if(this.gl){this.gl.deleteBuffer(this.vb);this.gl.deleteProgram(this.pr);}
     this.mode='none';
   }
-  /* 確定性取樣（截圖/對照用）：從 t=0 起以固定步長模擬 timeline=[[秒,狀態],...] */
+  /* 确定性取样（截图/对照用）：从 t=0 起以固定步长模拟 timeline=[[秒,状态],...] */
   simulate(seconds,timeline=[[0,'idle']],fps=60){
     this.theta=FIT.t0;this.time=0;this.lvS=0;this.level=0;for(const k in this.sp){this.sp[k].v=TARGET[timeline[0][1]][k];this.sp[k].d=0}
     this.state=timeline[0][1];const n=Math.round(seconds*fps);let ti=0;

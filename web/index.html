@@ -1,11 +1,11 @@
 <!doctype html>
-<html lang="zh-Hant">
+<html lang="zh-Hans">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="color-scheme" content="light" />
     <meta name="theme-color" content="#DC5C35" />
-    <meta name="description" content="本機語音介面：收音、字幕、串流播放與可配置的 Agent 接口。" />
+    <meta name="description" content="本机语音界面：收音、字幕、串流播放与可配置的 Agent 接口。" />
     <title>HER Voice</title>
     <link rel="stylesheet" href="./styles.css" />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23080d11'/%3E%3Cpath d='M9 8v16M23 8v16M9 16h14' stroke='%23b9dedb' stroke-width='2'/%3E%3C/svg%3E" />
@@ -31,66 +31,68 @@
 
     <div id="voice-app" class="voice-shell" data-state="idle" data-mode="live" data-connection="disconnected">
       <header class="top">
-        <div class="identity"><span class="brand">Her Voice Win</span><span class="badge" id="architecture-label">本機聽說 · DeepSeek 對話</span></div>
+        <div class="identity"><span class="brand">HER</span><span class="badge sr-only" id="architecture-label">本机听说 · DeepSeek 对话</span></div>
         <span id="connection-label" role="status">待命</span>
       </header>
-      <main class="scene" id="main-content" aria-label="OS¹ 語音對話">
-        <canvas id="sound-canvas" aria-label="開始對話" role="button" tabindex="0"></canvas>
-        <p id="mode-notice" class="mode-notice" hidden>示範模式 · 不開啟麥克風，不呼叫 API</p>
-        <div id="error-notice" class="error-notice" role="alert" hidden><p id="error-message"></p><button id="error-settings" class="text-button" type="button">查看設定</button></div>
+      <main class="scene" id="main-content" aria-label="OS¹ 语音对话">
+        <canvas id="sound-canvas" aria-label="开始通话" role="button" tabindex="0"></canvas>
+        <p id="mode-notice" class="mode-notice" hidden>演示模式 · 不打开麦克风，不呼叫 API</p>
+        <div id="error-notice" class="error-notice" role="alert" hidden><p id="error-message"></p><button id="error-settings" class="text-button" type="button">查看设置</button></div>
       </main>
       <footer class="dock">
         <div class="caption-stage cap">
           <p id="user-caption" class="user-caption" hidden><span class="sr-only">你</span><span id="user-caption-text"></span></p>
           <h1 id="main-caption" hidden></h1>
           <p id="supporting-caption" class="supporting-caption" hidden></p>
-          <div class="response-details"><button id="interrupt-button" class="interrupt-button" type="button" hidden>打斷回覆<span class="key-hint">Esc</span></button><span id="latency-label" class="latency-label" hidden></span></div>
+          <div class="response-details"><button id="interrupt-button" class="interrupt-button" type="button" hidden>打断回复<span class="key-hint">Esc</span></button><span id="latency-label" class="latency-label" hidden></span></div>
         </div>
         <div id="waveform" hidden aria-hidden="true"></div>
         <form id="text-composer" class="text-composer" hidden>
-          <label class="sr-only" for="message-input">輸入訊息</label>
+          <label class="sr-only" for="message-input">输入消息</label>
           <textarea id="message-input" rows="1" placeholder="想打字也可以…" autocomplete="off" aria-describedby="composer-hint"></textarea>
-          <button id="send-button" class="send-button" type="submit" aria-label="送出訊息" disabled>送出</button>
-          <p id="composer-hint" class="composer-hint">開始對話後即可送出訊息</p>
+          <button id="send-button" class="send-button" type="submit" aria-label="发送消息" disabled>发送</button>
+          <p id="composer-hint" class="composer-hint">开始通话后即可发送消息</p>
         </form>
-        <div class="bar" role="group" aria-label="語音控制">
-          <button id="call-button" class="call-button" type="button"><span id="call-label">開始對話</span></button>
-          <button id="mic-button" type="button" aria-label="暫停麥克風" aria-pressed="false" disabled><span id="mic-label">麥克風</span></button>
-          <button id="captions-button" type="button" aria-label="隱藏字幕" aria-pressed="true">字幕</button>
-          <button id="keyboard-button" type="button" aria-label="顯示文字輸入" aria-expanded="false" aria-controls="text-composer">輸入</button>
-          <button id="sound-button" type="button" aria-label="選擇播放裝置" aria-haspopup="dialog" aria-controls="settings-dialog">聲音</button>
-          <button id="history-button" type="button" aria-label="開啟會話記錄" aria-haspopup="dialog" aria-controls="history-dialog">會話</button>
-          <button id="settings-button" type="button" aria-label="開啟聲音與連線設定" aria-haspopup="dialog" aria-controls="settings-dialog">設定</button>
-          <button id="mode-button" class="mode-button" type="button"><span id="mode-button-label">試用示範</span></button>
+        <div class="call-controls" role="group" aria-label="通话控制">
+          <button id="mic-button" class="call-control" type="button" aria-label="暂停通话" aria-pressed="false" disabled><span class="control-disc"><svg class="icon" aria-hidden="true"><use href="#icon-mic"/></svg></span><span id="mic-label">暂停</span></button>
+          <button id="keyboard-button" class="call-control" type="button" aria-label="显示文字输入" aria-expanded="false" aria-controls="text-composer"><span class="control-disc"><svg class="icon" aria-hidden="true"><use href="#icon-keyboard"/></svg></span><span>键盘</span></button>
+          <button id="sound-button" class="call-control" type="button" aria-label="选择播放设备" aria-haspopup="dialog" aria-controls="settings-dialog"><span class="control-disc"><svg class="icon" aria-hidden="true"><use href="#icon-speaker"/></svg></span><span>音频</span></button>
+          <button id="captions-button" class="call-control" type="button" aria-label="隐藏字幕" aria-pressed="true"><span class="control-disc"><svg class="icon" aria-hidden="true"><use href="#icon-captions"/></svg></span><span>字幕</span></button>
+          <button id="history-button" class="call-control" type="button" aria-label="打开通话记录" aria-haspopup="dialog" aria-controls="history-dialog"><span class="control-disc"><svg class="icon" aria-hidden="true"><use href="#icon-history"/></svg></span><span>记录</span></button>
+          <button id="settings-button" class="call-control" type="button" aria-label="打开声音与连接设置" aria-haspopup="dialog" aria-controls="settings-dialog"><span class="control-disc"><svg class="icon" aria-hidden="true"><use href="#icon-settings"/></svg></span><span>设置</span></button>
+        </div>
+        <div class="call-actions">
+          <button id="call-button" class="call-button" type="button"><span class="call-disc"><svg class="icon" aria-hidden="true"><use href="#icon-phone"/></svg></span><span id="call-label">开始通话</span></button>
+          <button id="mode-button" class="mode-button" type="button"><span id="mode-button-label">试用演示</span></button>
         </div>
       </footer>
     </div>
 
     <dialog id="settings-dialog" class="side-panel" aria-labelledby="settings-title">
-      <div class="panel-heading"><div><p class="panel-context">HER VOICE</p><h2 id="settings-title">聲音與連線</h2></div><button class="close-button" type="button" data-close-dialog aria-label="關閉設定"><svg class="icon"><use href="#icon-close"/></svg></button></div>
+      <div class="panel-heading"><div><p class="panel-context">HER VOICE</p><h2 id="settings-title">声音与连接</h2></div><button class="close-button" type="button" data-close-dialog aria-label="关闭设置"><svg class="icon"><use href="#icon-close"/></svg></button></div>
       <div class="panel-body">
         <section class="settings-section" aria-labelledby="provider-settings-title">
-          <div class="settings-section-heading"><h3 id="provider-settings-title">回答接口</h3><button id="provider-reload" class="text-button" type="button">重新讀取</button></div>
-          <p id="provider-current" class="voice-current">尚未讀取接口設定</p>
+          <div class="settings-section-heading"><h3 id="provider-settings-title">回答接口</h3><button id="provider-reload" class="text-button" type="button">重新读取</button></div>
+          <p id="provider-current" class="voice-current">尚未读取接口设置</p>
           <form id="provider-form" autocomplete="off">
             <fieldset id="provider-fields" class="provider-fields" disabled>
-              <label class="field-label" for="provider-kind">供應商</label>
-              <div class="select-wrap"><select id="provider-kind"><option value="deepseek">DeepSeek</option><option value="openai-compatible">相容 OpenAI 的接口／Agent</option></select><svg class="icon"><use href="#icon-chevron"/></svg></div>
-              <label class="field-label" for="provider-url">接口網址</label>
+              <label class="field-label" for="provider-kind">供应商</label>
+              <div class="select-wrap"><select id="provider-kind"><option value="deepseek">DeepSeek</option><option value="openai-compatible">兼容 OpenAI 的接口／Agent</option></select><svg class="icon"><use href="#icon-chevron"/></svg></div>
+              <label class="field-label" for="provider-url">接口网址</label>
               <input id="provider-url" class="voice-input" type="url" maxlength="2048" placeholder="https://api.deepseek.com/chat/completions" required />
               <div class="settings-section-heading"><label class="field-label" for="provider-model-list">模型</label><button id="provider-models-refresh" class="text-button" type="button">拉取模型</button></div>
-              <div class="select-wrap"><select id="provider-model-list" aria-describedby="provider-models-message"><option value="">請先拉取模型</option></select><svg class="icon"><use href="#icon-chevron"/></svg></div>
-              <p id="provider-models-message" class="field-help" role="status" aria-live="polite">從目前接口讀取可用模型。</p>
-              <button id="provider-model-manual" class="text-button" type="button" aria-expanded="false" aria-controls="provider-model">手動輸入模型</button>
-              <input id="provider-model" class="voice-input" type="text" aria-label="手動模型名稱" maxlength="256" placeholder="填寫接口提供的模型 ID" hidden />
+              <div class="select-wrap"><select id="provider-model-list" aria-describedby="provider-models-message"><option value="">请先拉取模型</option></select><svg class="icon"><use href="#icon-chevron"/></svg></div>
+              <p id="provider-models-message" class="field-help" role="status" aria-live="polite">从当前接口读取可用模型。</p>
+              <button id="provider-model-manual" class="text-button" type="button" aria-expanded="false" aria-controls="provider-model">手动输入模型</button>
+              <input id="provider-model" class="voice-input" type="text" aria-label="手动模型名称" maxlength="256" placeholder="填写接口提供的模型 ID" hidden />
               <label class="field-label" for="provider-key">API Key</label>
-              <div class="provider-key-row"><input id="provider-key" class="voice-input" type="password" maxlength="4096" autocomplete="new-password" spellcheck="false" aria-describedby="provider-key-help" /><button id="provider-key-show" class="text-button" type="button" aria-pressed="false">顯示</button></div>
-              <p id="provider-key-help" class="field-help">Key 儲存在本機。已儲存的 Key 不會回傳；留空會保留同一接口的 Key。</p>
-              <button id="provider-test" class="voice-secondary-button" type="button">測試連線</button>
-              <button id="provider-save" class="panel-primary voice-apply-button" type="submit">儲存並套用</button>
+              <div class="provider-key-row"><input id="provider-key" class="voice-input" type="password" maxlength="4096" autocomplete="new-password" spellcheck="false" aria-describedby="provider-key-help" /><button id="provider-key-show" class="text-button" type="button" aria-pressed="false">显示</button></div>
+              <p id="provider-key-help" class="field-help">Key 保存在本机。已保存的 Key 不会回传；留空会保留同一接口的 Key。</p>
+              <button id="provider-test" class="voice-secondary-button" type="button">测试连接</button>
+              <button id="provider-save" class="panel-primary voice-apply-button" type="submit">保存并应用</button>
             </fieldset>
           </form>
-          <p class="field-help">測試會傳送一則短訊息到所選接口。變更設定會結束目前對話；設定未變時會保留連線與模型。</p>
+          <p class="field-help">测试会发送一则短消息到所选接口。变更设置会结束当前对话；设置未变时会保留连接与模型。</p>
           <p id="provider-message" class="voice-admin-message" role="status" aria-live="polite" hidden></p>
         </section>
         <section class="settings-section voice-settings-section" aria-labelledby="voice-settings-title">
@@ -117,29 +119,29 @@
           <p id="voice-admin-message" class="voice-admin-message" role="status" aria-live="polite" hidden></p>
           <p id="voice-admin-error" class="voice-admin-error" role="alert" hidden></p>
         </section>
-        <section class="settings-section" aria-labelledby="audio-settings-title"><h3 id="audio-settings-title">音訊裝置</h3>
-          <label class="field-label" for="mic-device">麥克風</label><div class="select-wrap"><select id="mic-device"><option value="">系統預設麥克風</option></select><svg class="icon"><use href="#icon-chevron"/></svg></div>
-          <label class="field-label" for="output-device">播放裝置</label><div class="select-wrap"><select id="output-device"><option value="">系統預設揚聲器</option></select><svg class="icon"><use href="#icon-chevron"/></svg></div>
-          <p class="field-help" id="device-help">開始對話並允許麥克風後，會顯示可用裝置。</p>
+        <section class="settings-section" aria-labelledby="audio-settings-title"><h3 id="audio-settings-title">音频设备</h3>
+          <label class="field-label" for="mic-device">麦克风</label><div class="select-wrap"><select id="mic-device"><option value="">系统默认麦克风</option></select><svg class="icon"><use href="#icon-chevron"/></svg></div>
+          <label class="field-label" for="output-device">播放设备</label><div class="select-wrap"><select id="output-device"><option value="">系统默认扬声器</option></select><svg class="icon"><use href="#icon-chevron"/></svg></div>
+          <p class="field-help" id="device-help">开始通话并允许麦克风后，会显示可用设备。</p>
         </section>
-        <section class="settings-section" aria-labelledby="conversation-settings-title"><h3 id="conversation-settings-title">對話方式</h3>
-          <p class="field-label" id="speech-language">語音語言：中文 / English，自動辨識</p>
+        <section class="settings-section" aria-labelledby="conversation-settings-title"><h3 id="conversation-settings-title">对话方式</h3>
+          <p class="field-label" id="speech-language">语音语言：中文 / English，自动辨识</p>
           <p class="field-help" id="speech-language-help">可直接要求改用中文或英文回答。</p>
-          <label class="toggle-row" for="captions-setting"><span><strong>即時字幕</strong><small>在主畫面顯示你與 HER 的對話</small></span><input id="captions-setting" type="checkbox" role="switch" checked/><span class="switch-track" aria-hidden="true"></span></label>
-          <label class="toggle-row" for="barge-in-setting"><span><strong>允許插話</strong><small>開口時停止目前的語音播放</small></span><input id="barge-in-setting" type="checkbox" role="switch" checked/><span class="switch-track" aria-hidden="true"></span></label>
+          <label class="toggle-row" for="captions-setting"><span><strong>即时字幕</strong><small>在主画面显示你与 HER 的对话</small></span><input id="captions-setting" type="checkbox" role="switch" checked/><span class="switch-track" aria-hidden="true"></span></label>
+          <label class="toggle-row" for="barge-in-setting"><span><strong>允许插话</strong><small>开口时停止当前的语音播放</small></span><input id="barge-in-setting" type="checkbox" role="switch" checked/><span class="switch-track" aria-hidden="true"></span></label>
         </section>
-        <section class="settings-section service-section" aria-labelledby="service-settings-title"><h3 id="service-settings-title">服務狀態</h3><dl class="service-list"><div><dt>連線模式</dt><dd id="service-mode">真實連線</dd></div><div><dt>語音服務</dt><dd id="service-engine">尚未檢查</dd></div><div><dt>語音設定</dt><dd id="service-profile">尚未檢查</dd></div><div><dt>回答接口</dt><dd id="service-key">尚未檢查</dd></div></dl></section>
+        <section class="settings-section service-section" aria-labelledby="service-settings-title"><h3 id="service-settings-title">服务状态</h3><dl class="service-list"><div><dt>连接模式</dt><dd id="service-mode">真实连接</dd></div><div><dt>语音服务</dt><dd id="service-engine">尚未检查</dd></div><div><dt>语音设置</dt><dd id="service-profile">尚未检查</dd></div><div><dt>回答接口</dt><dd id="service-key">尚未检查</dd></div></dl></section>
       </div>
       <div class="panel-footer"><button id="settings-done" class="panel-primary" type="button" data-close-dialog>完成</button></div>
     </dialog>
 
     <dialog id="history-dialog" class="side-panel history-panel" aria-labelledby="history-title">
-      <div class="panel-heading"><div><p class="panel-context">HER VOICE</p><h2 id="history-title">本次會話</h2></div><button class="close-button" type="button" data-close-dialog aria-label="關閉會話記錄"><svg class="icon"><use href="#icon-close"/></svg></button></div>
-      <div id="history-scroll" class="panel-body history-body"><div id="history-empty" class="history-empty"><svg class="icon"><use href="#icon-history"/></svg><h3>還沒有對話。</h3><p>開始後，字幕會留在這裡。</p></div><ol id="history-list" class="history-list" aria-label="對話字幕"></ol></div>
-      <div class="panel-footer"><button id="clear-history" class="text-button clear-history" type="button" disabled><svg class="icon"><use href="#icon-trash"/></svg>清除並重設對話</button><p>清除會結束連線並重設對話。</p></div>
+      <div class="panel-heading"><div><p class="panel-context">HER VOICE</p><h2 id="history-title">本次会话</h2></div><button class="close-button" type="button" data-close-dialog aria-label="关闭通话记录"><svg class="icon"><use href="#icon-close"/></svg></button></div>
+      <div id="history-scroll" class="panel-body history-body"><div id="history-empty" class="history-empty"><svg class="icon"><use href="#icon-history"/></svg><h3>还没有对话。</h3><p>开始后，字幕会留在这里。</p></div><ol id="history-list" class="history-list" aria-label="对话字幕"></ol></div>
+      <div class="panel-footer"><button id="clear-history" class="text-button clear-history" type="button" disabled><svg class="icon"><use href="#icon-trash"/></svg>清除并重设对话</button><p>清除会结束连接并重设对话。</p></div>
     </dialog>
     <div id="announcer" class="sr-only" aria-live="polite" aria-atomic="true"></div>
-    <noscript><div class="noscript-notice">HER Voice 需要 JavaScript 才能連接本機語音服務。請在瀏覽器中啟用 JavaScript。</div></noscript>
+    <noscript><div class="noscript-notice">HER Voice 需要 JavaScript 才能连接本机语音服务。请在浏览器中启用 JavaScript。</div></noscript>
     <script type="module" src="./app.js"></script>
   </body>
 </html>

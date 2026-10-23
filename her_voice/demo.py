@@ -43,7 +43,7 @@ async def demo_session(ws: web.WebSocketResponse) -> None:
         item = identifier("demo_assistant")
         common = {"response_id": rid, "item_id": item, "output_index": 0, "content_index": 0}
         await send("response.created", response={"id": rid, "status": "in_progress"})
-        result = f"這是協定演練。你輸入了「{text[:80]}」。字幕、播放排程和打斷已接通；剛才的聲音是測試音。切換「即時語音」後才會使用本地語音模型與 DeepSeek。"
+        result = f"这是协议演示。你输入了「{text[:80]}」。字幕、播放和打断功能已接通；刚才的声音是测试音。切回真实连接后才会使用本地语音模型与 DeepSeek。"
         try:
             await asyncio.sleep(0.18)
             for offset in range(0, len(result), 5):
@@ -89,7 +89,7 @@ async def demo_session(ws: web.WebSocketResponse) -> None:
                     await send("conversation.item.created", item={"id": item.get("id", identifier("demo_user")), **item})
                 elif kind == "response.create" and not paused:
                     await cancel()
-                    task = asyncio.create_task(answer(latest or "測試語音流程"))
+                    task = asyncio.create_task(answer(latest or "测试语音流程"))
                 elif kind == "response.cancel" and event.get("response_id") == active:
                     await cancel()
             except (ValueError, TypeError, AttributeError):

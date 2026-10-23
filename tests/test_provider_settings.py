@@ -233,7 +233,7 @@ class ProviderSettingsTests(unittest.IsolatedAsyncioTestCase):
         data = {'provider': 'openai-compatible', 'url': 'http://127.0.0.1:1/custom-agent', 'api_key': ''}
         response = await self.client.post('/api/provider/models', headers=self.headers, json=data)
         self.assertEqual(response.status, 400)
-        self.assertIn('手動', (await response.json())['error'])
+        self.assertIn('手动', (await response.json())['error'])
 
     async def test_catalog_connection_failure_is_explicit(self):
         upstream = web.Application()
@@ -245,7 +245,7 @@ class ProviderSettingsTests(unittest.IsolatedAsyncioTestCase):
                                           json={'provider': 'openai-compatible', 'url': url, 'api_key': ''})
         result = await response.json()
         self.assertFalse(result['ok'])
-        self.assertIn('連線', result['message'])
+        self.assertIn('连接', result['message'])
 
 if __name__ == '__main__':
     unittest.main()

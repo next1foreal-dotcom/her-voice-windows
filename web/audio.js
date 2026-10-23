@@ -45,7 +45,7 @@ export class VoiceAudio {
     const context = this.context;
     if (!context || context.state === 'closed') return;
     if (typeof context.setSinkId !== 'function') {
-      if (deviceId) throw new Error('這個瀏覽器不支援指定輸出裝置，請使用 Windows 預設輸出。');
+      if (deviceId) throw new Error('这个浏览器不支持指定输出设备，请使用 Windows 默认输出。');
       return;
     }
     try { await context.setSinkId(deviceId || ''); }
@@ -65,7 +65,7 @@ export class VoiceAudio {
     this.stopCapture();
     const ticket = ++this.captureEpoch;
     const context = this.context;
-    if (!globalThis.navigator?.mediaDevices?.getUserMedia) throw new Error('請使用可信任的 HTTPS 或 loopback 網址，以及新版 Edge 或 Chrome。');
+    if (!globalThis.navigator?.mediaDevices?.getUserMedia) throw new Error('请使用可信任的 HTTPS 或 loopback 网址，以及新版 Edge 或 Chrome。');
     const permission = navigator.mediaDevices.getUserMedia({audio: {
       channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true,
       ...(deviceId ? {deviceId: {exact: deviceId}} : {}),
@@ -78,7 +78,7 @@ export class VoiceAudio {
       stream = await Promise.race([permission, new Promise((_, reject) => {
         timer = setTimeout(() => {
           expired = true;
-          reject(new Error('語音服務已就緒，但瀏覽器未完成麥克風啟用。請確認選定的輸入裝置與頁面權限，再點「開始對話」；模型會保持載入。'));
+          reject(new Error('语音服务已就绪，但浏览器未完成麦克风启用。请确认选定的输入设备与页面权限，再点「开始通话」；模型会保持加载。'));
         }, 30_000);
       })]);
     } finally { clearTimeout(timer); }
@@ -107,7 +107,7 @@ export class VoiceAudio {
     };
     this.stream.getAudioTracks().forEach(track => {
       track.enabled = !this.capturePaused;
-      track.addEventListener('ended', () => { if (ticket === this.captureEpoch) this.onError?.(new Error('麥克風已中斷連線，請重新開始。')); }, {once: true});
+      track.addEventListener('ended', () => { if (ticket === this.captureEpoch) this.onError?.(new Error('麦克风已中断连接，请重新开始。')); }, {once: true});
     });
     this.source.connect(this.worklet);
     this.worklet.connect(this.context.destination);
@@ -129,7 +129,7 @@ export class VoiceAudio {
     const values = pcm16ToFloat(decodeBase64(base64));
     if (!values.length) return;
     const context = this.context;
-    if (this.nextTime - context.currentTime > 20) throw new Error('語音播放佇列過長，已停止這輪回覆。');
+    if (this.nextTime - context.currentTime > 20) throw new Error('语音播放队列过长，已停止这轮回复。');
     const audioBuffer = context.createBuffer(1, values.length, 24000);
     audioBuffer.copyToChannel(values, 0);
     const node = context.createBufferSource();

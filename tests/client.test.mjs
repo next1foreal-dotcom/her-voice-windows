@@ -301,7 +301,7 @@ test('provider_ready=false overrides legacy key presence and errors remain produ
   const h = harness(); t.after(() => h.client.destroy());
   h.health.provider_ready = false; h.health.api_key_configured = true;
   const errors = []; h.client.onError(error => errors.push(error));
-  await assert.rejects(h.client.connect(), /語言模型／Agent/);
+  await assert.rejects(h.client.connect(), /语言模型／Agent/);
   assert.equal(h.sockets.length, 0); assert.equal(h.client.state.connection, 'error');
   assert.equal(errors.length, 1); assert.ok(!errors[0].message.includes('DeepSeek'));
 });
@@ -320,7 +320,7 @@ test('capture backpressure closes only its own session without sending more fram
   a.latest().bufferedAmount = 256001;
   a.audio.callbacks.onFrame(new ArrayBuffer(1920));
   await turn();
-  assert.equal(a.client.state.connection, 'disconnected'); assert.match(a.client.state.error, /傳送落後/);
+  assert.equal(a.client.state.connection, 'disconnected'); assert.match(a.client.state.error, /发送落后/);
   assert.equal(a.latest().sent.filter(event => event.type === 'input_audio_buffer.append').length, 0);
   b.audio.callbacks.onFrame(new ArrayBuffer(1920));
   assert.equal(b.latest().sent.at(-1).type, 'input_audio_buffer.append'); assert.equal(b.client.state.connection, 'connected');

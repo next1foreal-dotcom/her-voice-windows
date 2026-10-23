@@ -133,7 +133,7 @@ class AppTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(events[-1]["response"], {"id": rid, "status": "completed"})
         captions = [event for event in events if event["type"] == "response.output_audio_transcript.done"]
         self.assertEqual(len(captions), 1)
-        self.assertIn("協定演練", captions[0]["transcript"])
+        self.assertIn("协议演示", captions[0]["transcript"])
         self.assertIn("測試😀", captions[0]["transcript"])
         audio = [event for event in events if event["type"] == "response.output_audio.delta"]
         self.assertTrue(audio)

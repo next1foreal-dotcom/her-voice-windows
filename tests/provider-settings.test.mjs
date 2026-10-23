@@ -48,7 +48,7 @@ test('unchanged provider save keeps the live client connected', async t => {
   await h.save();
   assert.equal(h.disconnects, 0);
   assert.equal(h.saved.length, 1);
-  assert.match(h.field('message').textContent, /無需重新載入模型/);
+  assert.match(h.field('message').textContent, /无需重新加载模型/);
 });
 test('changed model still disconnects before applying', async t => {
   const h = await fixture(t);

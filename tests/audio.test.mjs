@@ -178,7 +178,7 @@ test('ignored microphone permission times out and releases a late grant', async 
   t.mock.timers.enable({apis: ['setTimeout']});
   const audio = new VoiceAudio({}); audio.context = new FakeContext();
   const pending = audio.capture();
-  const rejected = assert.rejects(pending, /麥克風啟用/);
+  const rejected = assert.rejects(pending, /麦克风启用/);
   t.mock.timers.tick(30001);
   await rejected;
   const track = {stopped: false, stop() { this.stopped = true; }};

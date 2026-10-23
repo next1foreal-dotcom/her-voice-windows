@@ -75,7 +75,7 @@ export class VoiceClient {
       onFrame: pcm => {
         if (this._destroyed || !this._isOpen() || this._model.snapshot.connection !== 'connected' || this._model.snapshot.paused || this._model.snapshot.mode !== 'live') return;
         if (this._socket.bufferedAmount > 256_000) {
-          this._report(new Error('網路傳送落後，已結束這次連線；請檢查服務後重新開始。'));
+          this._report(new Error('网络发送落后，已结束这次连接；请检查服务后重新开始。'));
           this._disconnect(false).catch(error => this._report(error));
           return;
         }
@@ -174,8 +174,8 @@ export class VoiceClient {
     });
     let body;
     try { body = await response.json(); }
-    catch { throw new Error(`本機服務回傳無效 JSON（HTTP ${response.status}）。`); }
-    if (!response.ok) throw new Error(body.error || `本機服務錯誤：HTTP ${response.status}`);
+    catch { throw new Error(`本机服务回传无效 JSON（HTTP ${response.status}）。`); }
+    if (!response.ok) throw new Error(body.error || `本机服务错误：HTTP ${response.status}`);
     return body;
   }
 
@@ -279,7 +279,7 @@ export class VoiceClient {
         const config = await this._api('api/tts', {method: 'PUT', json: {backend, voice_id}, signal: controller.signal});
         if (this._destroyed || controller.signal.aborted) return false;
         if (!['drama3', 'qwen3'].includes(config.backend)) throw new Error('本机服务没有确认声音设置。');
-        Object.assign(this._model.snapshot.voiceAdmin, {config, message: '声音设置已应用。点击“开始对话”加载所选后端；已完成的对话仍然保留。'});
+        Object.assign(this._model.snapshot.voiceAdmin, {config, message: '声音设置已应用。点击“开始通话”加载所选后端；已完成的对话仍然保留。'});
         if (this._model.snapshot.health?.engine) {
           Object.assign(this._model.snapshot.health.engine, {state: 'stopped', ready: false, running: false});
         }
@@ -322,7 +322,7 @@ export class VoiceClient {
       try {
         const data = await this._api('api/bootstrap', {signal: controller.signal});
         if (this._destroyed || controller.signal.aborted) return this.state;
-        if (typeof data.token !== 'string' || !data.health || typeof data.health !== 'object') throw new Error('本機服務的初始化資料不完整。');
+        if (typeof data.token !== 'string' || !data.health || typeof data.health !== 'object') throw new Error('本机服务的初始化资料不完整。');
         this._token = data.token; this._model.snapshot.health = data.health;
         if (data.health.demo_only) this._model.snapshot.mode = 'demo';
         await this._refreshDevices();
@@ -354,7 +354,7 @@ export class VoiceClient {
   async _prepareEngine(epoch) {
     const initial = this._model.snapshot.health;
     const ready = typeof initial.provider_ready === 'boolean' ? initial.provider_ready : initial.api_key_configured;
-    if (!ready) throw new Error('請先設定語言模型／Agent 接口，再重新啟動本機服務。可切換「協定演練」測試介面。');
+    if (!ready) throw new Error('请先设置语言模型／Agent 接口，再重新启动本机服务。可切换「协议演练」测试界面。');
     const signal = this._connectionAbort.signal;
     let health = await this._api('api/status', {signal});
     if (!this._current(epoch)) return;
@@ -368,10 +368,10 @@ export class VoiceClient {
       if (health.engine.state === 'starting') health.engine.startup_wait_seconds = (performance.now() - preparationStarted) / 1000;
       this._model.snapshot.health = health; this._emit();
       if (health.engine.ready && health.engine.pool?.in_use === 0 && health.engine.pool?.units?.some(unit => unit.state === 'idle')) return;
-      if (health.engine.pool?.units?.some(unit => unit.state === 'stuck')) throw new Error('上一工作階段未能釋放。請結束啟動器，再重新啟動語音引擎。');
-      if (health.engine.ready && performance.now() > drainDeadline) throw new Error('上一工作階段仍在釋放資源；請稍後重試，持續無法恢復時重啟啟動器。');
-      if (['failed', 'stopped'].includes(health.engine.state)) throw new Error(health.engine.detail || '語音模型啟動失敗，請執行 doctor.py 檢查。');
-      if (performance.now() > deadline) throw new Error('語音服務啟動逾時，請查看本機引擎狀態與日誌。');
+      if (health.engine.pool?.units?.some(unit => unit.state === 'stuck')) throw new Error('上一工作阶段未能释放。请结束启动器，再重新启动语音引擎。');
+      if (health.engine.ready && performance.now() > drainDeadline) throw new Error('上一工作阶段仍在释放资源；请稍后重试，持续无法恢复时重启启动器。');
+      if (['failed', 'stopped'].includes(health.engine.state)) throw new Error(health.engine.detail || '语音模型启动失败，请执行 doctor.py 检查。');
+      if (performance.now() > deadline) throw new Error('语音服务启动超时，请查看本机引擎状态与日志。');
       await wait(1000, signal);
     }
   }
@@ -394,7 +394,7 @@ export class VoiceClient {
         if (error) reject(error); else resolve();
       };
       const waiter = {reject: error => finish(error)};
-      const timeout = setTimeout(() => finish(new Error('語音連線逾時，請重新開始。')), 12_000);
+      const timeout = setTimeout(() => finish(new Error('语音连接超时，请重新开始。')), 12_000);
       this._configuredWaiter = waiter;
       const current = () => this._current(epoch) && socket === this._socket;
       socket.onopen = () => {
@@ -405,10 +405,10 @@ export class VoiceClient {
         if (!current()) return;
         try {
           const event = JSON.parse(data);
-          if (!event || typeof event !== 'object' || Array.isArray(event) || typeof event.type !== 'string') throw new Error('語音服務傳回無效事件。');
+          if (!event || typeof event !== 'object' || Array.isArray(event) || typeof event.type !== 'string') throw new Error('语音服务传回无效事件。');
           if (event.type === 'conversation.item.created') this._itemWaiters.get(event.item?.id)?.resolve();
           if (event.type === 'error') {
-            const error = new Error(typeof event.error?.message === 'string' ? event.error.message.slice(0, 350) : '語音服務發生錯誤。');
+            const error = new Error(typeof event.error?.message === 'string' ? event.error.message.slice(0, 350) : '语音服务发生错误。');
             this._rejectItems(error);
             if (!settled) { finish(error); return; }
             this._report(error);
@@ -428,12 +428,12 @@ export class VoiceClient {
         }
       };
       socket.onerror = () => {
-        const error = new Error('無法連接語音服務；請確認模型載入完成。');
+        const error = new Error('无法连接语音服务；请确认模型加载完成。');
         if (!settled) finish(error); else if (current()) this._unexpectedClose(error);
       };
       socket.onclose = () => {
-        finish(new Error('語音連線已關閉。'));
-        if (current()) this._unexpectedClose(new Error('語音服務連線已中斷。已完成的對話保留，請重新開始。'));
+        finish(new Error('语音连接已关闭。'));
+        if (current()) this._unexpectedClose(new Error('语音服务连接已中断。已完成的对话保留，请重新开始。'));
       };
     });
   }
@@ -510,7 +510,7 @@ export class VoiceClient {
   async _createItem(item, epoch) {
     if (!this._current(epoch)) throw abortError();
     await new Promise((resolve, reject) => {
-      const timer = setTimeout(() => waiter.reject(new Error('語音服務未確認對話內容。')), 8000);
+      const timer = setTimeout(() => waiter.reject(new Error('语音服务未确认对话内容。')), 8000);
       const finish = error => {
         clearTimeout(timer);
         if (this._itemWaiters.get(item.id) === waiter) this._itemWaiters.delete(item.id);
@@ -518,7 +518,7 @@ export class VoiceClient {
       };
       const waiter = {resolve: () => finish(), reject: error => finish(error)};
       this._itemWaiters.set(item.id, waiter);
-      if (!this._send({type: 'conversation.item.create', item})) waiter.reject(new Error('語音連線已中斷。'));
+      if (!this._send({type: 'conversation.item.create', item})) waiter.reject(new Error('语音连接已中断。'));
     });
   }
   async _restoreHistory(epoch) {
@@ -578,8 +578,8 @@ export class VoiceClient {
     this._assertAlive();
     const text = String(value ?? '').trim().slice(0, 8000);
     if (!text) return false;
-    if (this._model.snapshot.connection !== 'connected') throw this._report(new Error('請先開始連線，再傳送文字。'));
-    if (this._model.snapshot.paused) throw this._report(new Error('目前已暫停，請先恢復對話。'));
+    if (this._model.snapshot.connection !== 'connected') throw this._report(new Error('请先开始连接，再发送文字。'));
+    if (this._model.snapshot.paused) throw this._report(new Error('当前已暂停，请先恢复对话。'));
     if (this._operation) return false;
     const submittedAt = performance.now();
     // Upstream has no input-audio reset/idle ACK: start a fresh session and
@@ -633,7 +633,7 @@ export class VoiceClient {
     this._assertAlive();
     if (!['live', 'demo'].includes(mode)) throw this._report(new TypeError('Voice mode must be live or demo.'));
     if (mode === this._model.snapshot.mode) return false;
-    if (mode === 'live' && this._model.snapshot.health.demo_only) throw this._report(new Error('目前由演練啟動器開啟。要使用本地模型，請執行 scripts/start.ps1。'));
+    if (mode === 'live' && this._model.snapshot.health.demo_only) throw this._report(new Error('当前由演练启动器打开。要使用本地模型，请执行 scripts/start.ps1。'));
     const closing = this._disconnect();
     this._resetConversation(); this._model.snapshot.mode = mode; this._emit(); await closing; return true;
   }
