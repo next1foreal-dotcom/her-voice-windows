@@ -43,7 +43,7 @@
       <main class="voice-stage" id="main-content" aria-labelledby="main-caption">
         <p id="mode-notice" class="mode-notice" hidden>示範模式 · 不開啟麥克風，不呼叫 API</p>
         <div id="error-notice" class="error-notice" role="alert" hidden><p id="error-message"></p><button id="error-settings" class="text-button" type="button">查看設定<svg class="icon"><use href="#icon-arrow"/></svg></button></div>
-        <div class="sound-field" aria-hidden="true"><canvas id="sound-canvas"></canvas></div>
+        <div class="sound-field"><canvas id="sound-canvas" aria-hidden="true"></canvas><button id="orb-button" class="orb-button" type="button" aria-label="開始對話"><span id="orb-hint" class="orb-hint" aria-hidden="true">輕觸開始</span></button></div>
         <div id="waveform" class="waveform" aria-hidden="true"></div>
         <div class="caption-stage">
           <p id="user-caption" class="user-caption" hidden><span class="caption-speaker">你</span><span id="user-caption-text"></span></p>

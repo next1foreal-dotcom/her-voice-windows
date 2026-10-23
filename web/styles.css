@@ -198,6 +198,42 @@ textarea.voice-input { min-height: 100px; resize: vertical; }
 .history-panel .panel-footer p { margin-top: 9px; color: var(--secondary); font-size: 10px; line-height: 1.8; }
 .noscript-notice { position: fixed; inset: auto 20px 20px; padding: 20px; border: 1px solid #6a403b; border-radius: 12px; background: #261b1b; color: var(--error); z-index: 20; font-size: 16px; }
 
+/* Voice orb: ambient light, interaction surface and premium finish. */
+@property --ambient { syntax: "<color>"; inherits: true; initial-value: rgba(76, 150, 156, .16); }
+.voice-shell { --ambient: rgba(76, 150, 156, .16); position: relative; isolation: isolate; transition: --ambient 900ms ease; }
+.voice-shell[data-state="listening"], .voice-shell[data-state="interrupted"] { --ambient: rgba(52, 160, 205, .20); }
+.voice-shell[data-state="thinking"] { --ambient: rgba(104, 106, 220, .20); }
+.voice-shell[data-state="speaking"] { --ambient: rgba(96, 196, 176, .22); }
+.voice-shell[data-state="paused"] { --ambient: rgba(150, 124, 78, .12); }
+.voice-shell::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(ellipse 55% 48% at 50% 40%, var(--ambient), transparent 70%),
+    radial-gradient(ellipse 120% 90% at 50% 120%, #0d1a20 0%, transparent 60%),
+    radial-gradient(ellipse 140% 110% at 50% 40%, transparent 55%, #03070a 100%); }
+.voice-shell::after { content: ""; position: fixed; inset: 0; z-index: 30; pointer-events: none; opacity: .045; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+.sound-field { --orb-size: 62%; display: grid; place-items: center; }
+.sound-field > * { grid-area: 1 / 1; }
+.orb-button { position: relative; width: var(--orb-size); height: var(--orb-size); border-radius: 50%; background: transparent; padding: 0; cursor: pointer; -webkit-user-select: none; user-select: none; }
+.orb-button:disabled { cursor: progress; }
+.orb-button:focus-visible { outline: 1px solid rgba(185, 222, 219, .55); outline-offset: 14px; }
+.orb-button:not(:disabled):active { transform: none; }
+.orb-hint { position: absolute; left: 50%; bottom: -34px; transform: translate(-50%, 4px); white-space: nowrap; font-size: 11px; line-height: 1.5; letter-spacing: .32em; color: var(--muted); opacity: 0; transition: opacity 260ms ease, transform 260ms ease; pointer-events: none; }
+.orb-button:hover:not(:disabled) .orb-hint, .orb-button:focus-visible .orb-hint { opacity: .85; transform: translate(-50%, 0); }
+[data-connection="disconnected"] .orb-button:not(:disabled) .orb-hint { opacity: .55; transform: translate(-50%, 0); }
+@media (hover: none) { .orb-hint { display: none; } }
+.waveform { color: #cfe9e6; }
+.waveform span { width: 1.5px; background: linear-gradient(to bottom, transparent, currentColor 35%, currentColor 65%, transparent); }
+[data-state="thinking"] .waveform { color: #c9c7ff; }
+[data-state="listening"] .waveform, [data-state="interrupted"] .waveform { color: #bfeefb; }
+.round-control { background: linear-gradient(160deg, rgba(28, 42, 50, .72), rgba(11, 18, 23, .72)); border-color: rgba(120, 150, 162, .38); backdrop-filter: blur(14px); box-shadow: inset 0 1px rgba(230, 245, 248, .07), 0 10px 30px rgba(0, 0, 0, .28); }
+.round-control:hover:not(:disabled) { border-color: rgba(170, 205, 212, .7); background: linear-gradient(160deg, rgba(40, 60, 70, .8), rgba(16, 26, 32, .8)); }
+.call-button { background: linear-gradient(180deg, #f6f7f3, #dfe4e0); box-shadow: inset 0 1px rgba(255, 255, 255, .9), 0 14px 40px rgba(170, 225, 220, .10); }
+.call-button:hover:not(:disabled) { background: linear-gradient(180deg, #ffffff, #e8eeea); box-shadow: inset 0 1px #fff, 0 16px 46px rgba(170, 225, 220, .18); }
+.call-button.is-active { background: linear-gradient(180deg, #3a2829, #2a1d1e); box-shadow: inset 0 1px rgba(255, 200, 195, .08), 0 14px 40px rgba(0, 0, 0, .3); }
+.call-button.is-active:hover { background: linear-gradient(180deg, #4a3031, #362425); }
+#main-caption { text-shadow: 0 0 28px rgba(185, 222, 219, .10); }
+
 @keyframes panel-enter { from { opacity: .4; transform: translateX(14px); } to { opacity: 1; transform: translateX(0); } }
 
 @media (min-width: 1700px) {
