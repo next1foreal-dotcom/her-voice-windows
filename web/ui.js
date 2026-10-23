@@ -18,7 +18,7 @@ const INITIAL = {
 };
 
 const STATE_COPY = {
-  idle: ["把想法，說出來。", "不必整理好才開口。從第一句，慢慢開始。"],
+  idle: ["準備好聽你說。", "從一個念頭，開始一段對話。"],
   listening: ["我在聽，請說。", "可以自然說話，也可以隨時插話。"],
   thinking: ["讓我想一想。", "正在生成回覆。"],
   speaking: ["正在回覆你。", "你可以直接開口打斷我。"],
@@ -66,7 +66,7 @@ export function createUI(actions = {}) {
   const el = Object.fromEntries([
     "voice-app", "connection-label", "history-button", "settings-button",
     "mode-notice", "error-notice", "error-message", "error-settings",
-    "sound-canvas", "waveform", "orb-button", "orb-hint", "user-caption", "user-caption-text",
+    "sound-canvas", "waveform", "user-caption", "user-caption-text",
     "main-caption", "supporting-caption", "interrupt-button", "latency-label",
     "text-composer", "message-input", "send-button", "composer-hint",
     "mic-button", "mic-label", "captions-button", "call-button", "call-label",
@@ -77,8 +77,6 @@ export function createUI(actions = {}) {
     "history-empty", "history-list", "clear-history", "announcer",
     "voice-backend", "voice-select", "voice-name", "voice-transcript", "voice-file",
     "voice-import-form", "voice-import-button", "voice-apply-button", "voice-refresh-button",
-    "theme-button", "focus-button", "engine-summary", "privacy-copy", "stage-state", "control-hint", "conversation-starters",
-    "transcript-list", "transcript-scroll", "transcript-empty", "transcript-count",
     "voice-admin-message", "voice-admin-error", "voice-current", "voice-details", "voice-import-details",
   ].map((id) => [id, byId(id)]));
 
@@ -98,7 +96,9 @@ export function createUI(actions = {}) {
   let importedVoiceId = "";
   let composerOpen = false;
   let restoreFocus = null;
+  let layoutSpace = "";
   const messageNodes = new Map();
+  const captionStage = el["main-caption"].closest(".caption-stage");
 
   const invoke = (name, ...args) => {
     if (typeof actions[name] === "function") return actions[name](...args);
@@ -106,12 +106,6 @@ export function createUI(actions = {}) {
   };
   const listen = (target, name, handler) => target.addEventListener(name, handler, { signal });
   const connected = () => snapshot.connection === "connected";
-  const orbState = () => (snapshot.paused || snapshot.state === "paused") && connected() ? "paused" : snapshot.state;
-  function orbAction() {
-    if (snapshot.voiceAdmin?.busy || snapshot.connection === "connecting") return "";
-    if (!connected()) return "onStart";
-    return ["thinking", "speaking"].includes(orbState()) ? "onInterrupt" : "onPause";
-  }
 
   function announce(value) {
     if (value && value !== lastAnnouncement) {
@@ -119,67 +113,6 @@ export function createUI(actions = {}) {
       lastAnnouncement = value;
     }
   }
-
-  const settingsTabs = Array.from(document.querySelectorAll("[data-settings-tab]"));
-  function selectSettingsTab(name, focus = false) {
-    for (const tab of settingsTabs) {
-      const selected = tab.dataset.settingsTab === name;
-      tab.setAttribute("aria-selected", String(selected));
-      tab.tabIndex = selected ? 0 : -1;
-      const section = byId(tab.getAttribute("aria-controls"));
-      section.hidden = !selected;
-      if (selected && focus) tab.focus();
-    }
-    const body = el["settings-dialog"].querySelector(".panel-body");
-    body.scrollTop = 0;
-  }
-  for (const tab of settingsTabs) {
-    listen(tab, "click", () => selectSettingsTab(tab.dataset.settingsTab));
-    listen(tab, "keydown", event => {
-      const index = settingsTabs.indexOf(tab);
-      const keys = { ArrowRight: (index + 1) % settingsTabs.length, ArrowLeft: (index + settingsTabs.length - 1) % settingsTabs.length, Home: 0, End: settingsTabs.length - 1 };
-      if (!Object.hasOwn(keys, event.key)) return;
-      event.preventDefault();
-      selectSettingsTab(settingsTabs[keys[event.key]].dataset.settingsTab, true);
-    });
-  }
-
-  // Follow the OS until the user explicitly chooses an appearance.
-  const systemTheme = matchMedia("(prefers-color-scheme: dark)");
-  let themeChoice = "";
-  try { themeChoice = localStorage.getItem("her-voice-theme") || ""; } catch { /* Optional preference. */ }
-  if (!["dark", "light"].includes(themeChoice)) themeChoice = "";
-  function applyTheme() {
-    if (themeChoice) document.documentElement.dataset.theme = themeChoice;
-    else delete document.documentElement.dataset.theme;
-    const dark = themeChoice ? themeChoice === "dark" : systemTheme.matches;
-    const label = dark ? "切換為淺色外觀" : "切換為深色外觀";
-    el["theme-button"].setAttribute("aria-label", label);
-    el["theme-button"].title = label;
-    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", dark ? "#101412" : "#f5f6f2");
-  }
-  applyTheme();
-  listen(systemTheme, "change", applyTheme);
-  listen(el["theme-button"], "click", () => {
-    const dark = themeChoice ? themeChoice === "dark" : systemTheme.matches;
-    themeChoice = dark ? "light" : "dark";
-    try { localStorage.setItem("her-voice-theme", themeChoice); } catch { /* Remains in memory. */ }
-    applyTheme();
-  });
-  listen(el["focus-button"], "click", () => {
-    const focus = el["voice-app"].dataset.focus !== "true";
-    el["voice-app"].dataset.focus = String(focus);
-    el["focus-button"].setAttribute("aria-pressed", String(focus));
-    el["focus-button"].setAttribute("aria-label", focus ? "離開專注模式" : "開啟專注模式");
-    el["focus-button"].title = focus ? "離開專注模式" : "專注模式";
-  });
-  document.querySelectorAll("[data-toggle-mode]").forEach(button => listen(button, "click", () => invoke("onModeChange", snapshot.mode === "demo" ? "live" : "demo")));
-  document.querySelectorAll("[data-open-history]").forEach(button => listen(button, "click", () => openPanel(el["history-dialog"])));
-  document.querySelectorAll("[data-open-settings]").forEach(button => listen(button, "click", () => openPanel(el["settings-dialog"])));
-  document.querySelectorAll("[data-prompt]").forEach(button => listen(button, "click", () => {
-    el["message-input"].value = button.dataset.prompt;
-    setComposer(true);
-  }));
 
   function closePanels() {
     for (const panel of [el["settings-dialog"], el["history-dialog"]]) {
@@ -191,10 +124,6 @@ export function createUI(actions = {}) {
     if (panel.open) return;
     closePanels();
     restoreFocus = document.activeElement;
-    if (panel === el["settings-dialog"] && focusTarget) {
-      const section = focusTarget.closest("[role=tabpanel]");
-      if (section) selectSettingsTab(section.id.replace("settings-", ""));
-    }
     panel.showModal();
     if (panel === el["settings-dialog"]) invoke("onLoadVoiceSettings");
     if (focusTarget) focusTarget.focus({ preventScroll: true });
@@ -209,13 +138,27 @@ export function createUI(actions = {}) {
     const input = el["message-input"];
     input.style.height = "auto";
     input.style.height = `${Math.min(input.scrollHeight, 110)}px`;
+    syncLayoutSpace();
+  }
+
+  function syncLayoutSpace() {
+    const composer = el["text-composer"];
+    const composerSpace = composerOpen
+      ? composer.getBoundingClientRect().height + (parseFloat(getComputedStyle(composer).marginBottom) || 0)
+      : 0;
+    const captionMinimum = parseFloat(getComputedStyle(captionStage).minHeight) || 0;
+    const captionOverflow = Math.max(0, captionStage.getBoundingClientRect().height - captionMinimum);
+    const signature = `${Math.ceil(composerSpace)}:${Math.ceil(captionOverflow)}`;
+    if (signature === layoutSpace) return;
+    layoutSpace = signature;
+    el["voice-app"].style.setProperty("--composer-space", `${Math.ceil(composerSpace)}px`);
+    el["voice-app"].style.setProperty("--caption-overflow", `${Math.ceil(captionOverflow)}px`);
   }
 
   function setComposer(open) {
     composerOpen = open;
     el["text-composer"].hidden = !open;
     el["voice-app"].dataset.composer = String(open);
-    el["conversation-starters"].hidden = open || connected() || snapshot.connection === "connecting";
     el["keyboard-button"].setAttribute("aria-expanded", String(open));
     el["keyboard-button"].setAttribute("aria-label", open ? "收起文字輸入" : "顯示文字輸入");
     el["interrupt-button"].querySelector(".key-hint").hidden = open;
@@ -226,9 +169,14 @@ export function createUI(actions = {}) {
         el["text-composer"].scrollIntoView({ block: "nearest", behavior: "auto" });
       }
     } else {
+      syncLayoutSpace();
       el["keyboard-button"].focus({ preventScroll: true });
     }
   }
+
+  const layoutObserver = new ResizeObserver(syncLayoutSpace);
+  layoutObserver.observe(captionStage);
+  layoutObserver.observe(el["text-composer"]);
 
   function submitMessage(event) {
     event?.preventDefault();
@@ -251,12 +199,6 @@ export function createUI(actions = {}) {
     invoke(snapshot.connection === "connected" || snapshot.connection === "connecting" ? "onStop" : "onStart");
   });
   listen(el["mic-button"], "click", () => invoke("onPause"));
-  listen(el["orb-button"], "click", () => {
-    const action = orbAction();
-    if (!action) return;
-    sound.pulse();
-    invoke(action);
-  });
   listen(el["captions-button"], "click", () => invoke("onSettingsChange", { captions: !snapshot.settings.captions }));
   listen(el["keyboard-button"], "click", () => setComposer(!composerOpen));
   listen(el["history-button"], "click", () => openPanel(el["history-dialog"]));
@@ -356,8 +298,6 @@ export function createUI(actions = {}) {
     historySignature = signature;
     const scroll = el["history-scroll"];
     const wasNearBottom = scroll.scrollHeight - scroll.scrollTop - scroll.clientHeight < 80;
-    const transcript = el["transcript-scroll"];
-    const transcriptAtBottom = transcript.scrollHeight - transcript.scrollTop - transcript.clientHeight < 80;
     const fragment = document.createDocumentFragment();
     const currentKeys = new Set();
     messages.forEach((message, index) => {
@@ -390,12 +330,6 @@ export function createUI(actions = {}) {
     el["history-list"].replaceChildren(fragment);
     el["history-empty"].hidden = messages.length > 0;
     el["clear-history"].disabled = messages.length === 0;
-    // Mirror only safe, text-populated nodes. Do not reparse model/user content.
-    el["transcript-list"].replaceChildren(...Array.from(el["history-list"].children, node => node.cloneNode(true)));
-    el["transcript-empty"].hidden = messages.length > 0;
-    el["transcript-count"].textContent = String(messages.length);
-    el["transcript-count"].setAttribute("aria-label", `${messages.length} 則訊息`);
-    if (transcriptAtBottom) transcript.scrollTop = transcript.scrollHeight;
     if (wasNearBottom) scroll.scrollTop = scroll.scrollHeight;
   }
 
@@ -406,7 +340,7 @@ export function createUI(actions = {}) {
     const sampleRate = Number.isFinite(voice?.sample_rate) ? `${(voice.sample_rate / 1000).toFixed(1)} kHz` : "";
     el["voice-details"].textContent = voice
       ? [duration, sampleRate, text(voice.transcript)].filter(Boolean).join(" · ")
-      : "請匯入參考錄音，或選擇已儲存的音色。";
+      : "请导入参考录音，或选择已保存的音色。";
     el["voice-apply-button"].disabled = Boolean(admin.loading || admin.busy || !admin.config || !voice);
   }
 
@@ -419,7 +353,7 @@ export function createUI(actions = {}) {
     if (listSignature !== voiceListSignature) {
       voiceListSignature = listSignature;
       const selected = el["voice-select"].value;
-      const options = [new Option(voices.length ? "請選擇參考音色" : "請先匯入一段參考錄音", "")];
+      const options = [new Option(voices.length ? "请选择参考音色" : "请先导入一段参考录音", "")];
       for (const voice of voices) options.push(new Option(text(voice.name) || voice.id, voice.id));
       el["voice-select"].replaceChildren(...options);
       el["voice-select"].value = voices.some(voice => voice.id === selected) ? selected : (config?.voice_id || "");
@@ -439,13 +373,13 @@ export function createUI(actions = {}) {
     const selected = voices.find(voice => voice.id === config?.voice_id);
     const label = config?.backend === "qwen3" ? "Qwen3-TTS Base" : "Drama 3";
     el["voice-current"].textContent = config
-      ? `${label} · ${selected ? text(selected.name) : "尚未選擇參考音色"}`
-      : admin.loading ? "正在讀取本機聲音設定…" : "声音设置尚未读取";
+      ? `${label} · ${selected ? text(selected.name) : "尚未选择参考音色"}`
+      : admin.loading ? "正在读取本机声音设置…" : "声音设置尚未读取";
     const busy = Boolean(admin.loading || admin.busy);
     el["voice-current"].setAttribute("aria-busy", String(busy));
     for (const id of ["voice-backend", "voice-select", "voice-name", "voice-transcript", "voice-file", "voice-import-button", "voice-refresh-button"]) el[id].disabled = busy;
-    el["voice-import-button"].textContent = admin.busy ? "正在處理…" : "儲存參考音色";
-    el["voice-apply-button"].textContent = admin.busy ? "正在處理…" : "套用聲音設定";
+    el["voice-import-button"].textContent = admin.busy ? "正在处理…" : "保存参考音色";
+    el["voice-apply-button"].textContent = admin.busy ? "正在处理…" : "应用声音设置";
     el["voice-admin-message"].textContent = text(admin.message);
     el["voice-admin-message"].hidden = !text(admin.message);
     el["voice-admin-error"].textContent = text(admin.error);
@@ -453,7 +387,7 @@ export function createUI(actions = {}) {
     renderVoiceDetails();
   }
 
-  const sound = createSoundField(el["sound-canvas"], el.waveform, el["orb-button"]);
+  const sound = createSoundField(el["sound-canvas"], el.waveform);
 
   function render(next = {}) {
     snapshot = {
@@ -484,7 +418,6 @@ export function createUI(actions = {}) {
     el["mode-notice"].hidden = !demo;
     el["mode-notice"].textContent = "示範模式 · 協定演練／測試音，不使用麥克風或 API";
     el["mode-button-label"].textContent = demo ? "切回真實連線" : "試用示範";
-    document.querySelectorAll("[data-mode-label]").forEach(label => { label.textContent = el["mode-button-label"].textContent; });
     el["mode-button"].setAttribute("aria-label", demo ? "切換至真實語音連線" : "切換至示範模式，不使用麥克風或 API");
     const applicationName = text(snapshot.health?.app_name) || "HER Voice";
     const genericProvider = snapshot.health?.provider === "openai-compatible";
@@ -566,14 +499,7 @@ export function createUI(actions = {}) {
     el["barge-in-setting"].checked = Boolean(snapshot.settings.bargeIn);
     el["service-mode"].textContent = demo ? "示範協定演練" : "真實連線";
     const engineLabels = { ready: "已就緒", starting: "載入中", failed: "啟動失敗", stopped: "尚未啟動", stopping: "停止中" };
-    const engineStatus = engineLabels[snapshot.health?.engine?.state] || "尚未檢查";
-    el["service-engine"].textContent = engineStatus;
-    el["engine-summary"].textContent = demo ? "示範模式 · 未使用引擎" : engineStatus;
-    el["privacy-copy"].textContent = demo ? "示範不採集麥克風、不呼叫 API，僅使用測試音。" : "語音在本機處理；對話文字傳送至所選模型。";
-    const stateLabels = { idle: "隨時開始", listening: "正在聆聽", thinking: "正在思考", speaking: "正在回覆", paused: "麥克風已暫停", interrupted: "已打斷回覆" };
-    el["stage-state"].textContent = connection === "connecting" ? "正在連線" : connection === "error" ? "需要檢查連線" : isConnected ? stateLabels[voiceState] : "隨時開始";
-    el["conversation-starters"].hidden = composerOpen || isConnected || connection === "connecting";
-    el["control-hint"].textContent = connection === "connecting" ? "準備中，可隨時取消連線" : !isConnected ? demo ? "點擊開始示範，或輕觸絲帶" : "點擊開始對話，或輕觸絲帶" : paused ? "輕觸絲帶或麥克風，繼續對話" : demo ? "示範使用測試音；可透過文字輸入演練" : ["speaking", "thinking"].includes(voiceState) ? "想接話時，輕觸絲帶即可打斷" : "自然開口就好，HER 正在聆聽";
+    el["service-engine"].textContent = engineLabels[snapshot.health?.engine?.state] || "尚未檢查";
     el["service-profile"].textContent = text(snapshot.health?.profile) || "尚未檢查";
     const providerReady = snapshot.health?.provider_ready ?? snapshot.health?.api_key_configured;
     el["service-key"].textContent = providerReady === true ? "設定已齊備，待實際連線" : providerReady === false ? "尚未設定" : "尚未檢查";
@@ -581,13 +507,6 @@ export function createUI(actions = {}) {
     renderHistory();
     renderVoiceSettings();
     updateComposer();
-    const orbCopy = !isConnected
-      ? connection === "connecting" ? ["正在連線", "正在連接語音服務"] : [demo ? "輕觸開始示範" : "輕觸開始", demo ? "開始示範" : "開始對話"]
-      : voiceState === "paused" ? ["輕觸繼續", "恢復麥克風"]
-        : ["thinking", "speaking"].includes(voiceState) ? ["輕觸打斷", "打斷回覆"] : ["輕觸暫停", "暫停麥克風"];
-    el["orb-hint"].textContent = orbCopy[0];
-    el["orb-button"].setAttribute("aria-label", orbCopy[1]);
-    el["orb-button"].disabled = Boolean(snapshot.voiceAdmin?.busy) || connection === "connecting";
     sound.setState(isConnected ? voiceState : connection === "connecting" ? "thinking" : "idle", isConnected);
     announce(`${demo ? "示範模式，" : ""}${connectionLabel}。${heading}`);
   }
@@ -598,6 +517,7 @@ export function createUI(actions = {}) {
     setLevels(input = 0, output = 0) { sound.setLevels(finiteLevel(input), finiteLevel(output)); },
     destroy() {
       controller.abort();
+      layoutObserver.disconnect();
       sound.destroy();
       closePanels();
     },
