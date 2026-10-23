@@ -43,7 +43,7 @@ async def demo_session(ws: web.WebSocketResponse) -> None:
         item = identifier("demo_assistant")
         common = {"response_id": rid, "item_id": item, "output_index": 0, "content_index": 0}
         await send("response.created", response={"id": rid, "status": "in_progress"})
-        result = f"这是协议演示。你输入了「{text[:80]}」。字幕、播放和打断功能已接通；刚才的声音是测试音。切回真实连接后才会使用本地语音模型与 DeepSeek。"
+        result = f"演示回复：「{text[:80]}」。"
         try:
             await asyncio.sleep(0.18)
             for offset in range(0, len(result), 5):

@@ -80,7 +80,7 @@ export function attachProviderSettings({client, baseUrl, fetch: fetcher = global
       headers: {'X-Voice-Token': token, ...(data ? {'Content-Type': 'application/json'} : {})},
       ...(data ? {body: JSON.stringify(data)} : {}),
     });
-    if (response.status === 404) throw new Error('请重新启动 HER Voice 本机服务，以加载回答接口设置功能。');
+    if (response.status === 404) throw new Error('请重新启动 Open OS1 本机服务，以加载回答接口设置功能。');
     if (response.status === 403) { token = ''; throw new Error('设置连接已失效，请重新读取。'); }
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || `设置失败（HTTP ${response.status}）。`);
@@ -97,7 +97,7 @@ export function attachProviderSettings({client, baseUrl, fetch: fetcher = global
     el.key.type = 'password';
     el['key-show'].textContent = '显示';
     el['key-show'].setAttribute('aria-pressed', 'false');
-    el.key.placeholder = config.api_key_configured ? '???????? 已保存；输入新 Key 可更换' : '贴上此接口的 API Key';
+    el.key.placeholder = config.api_key_configured ? '已保存；留空保留' : '贴上此接口的 API Key';
     el.current.textContent = `${config.provider === 'deepseek' ? 'DeepSeek' : '相容接口'} · ${config.model} · ${config.api_key_configured ? 'Key 已设置' : '未设置 Key'}`;
   }
   async function load(force = false) {

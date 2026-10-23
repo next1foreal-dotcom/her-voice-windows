@@ -94,7 +94,7 @@ class Settings:
     provider_model: str = ""
     provider_url: str | None = field(default=None, repr=False)
     app_id: str = "her-voice"
-    app_name: str = "HER Voice"
+    app_name: str = "Open OS1"
     host: str = "127.0.0.1"
     port: int = 8790
     engine_port: int = 8791
@@ -190,7 +190,7 @@ class Settings:
             provider_model=values.get("VOICE_PROVIDER_MODEL", ""),
             provider_url=values.get("VOICE_PROVIDER_URL") or None,
             app_id=values.get("VOICE_APP_ID", "her-voice"),
-            app_name=values.get("VOICE_APP_NAME", "HER Voice"),
+            app_name=values.get("VOICE_APP_NAME", "Open OS1"),
             host=values.get("VOICE_HOST", "127.0.0.1"),
             port=_port(values.get("VOICE_PORT", 8790), "VOICE_PORT"),
             engine_port=_port(values.get("VOICE_ENGINE_PORT", 8791), "VOICE_ENGINE_PORT"),

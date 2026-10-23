@@ -60,19 +60,19 @@ function isEditableOrControl(target) {
 export function createUI(actions = {}) {
   const byId = (id) => {
     const element = document.getElementById(id);
-    if (!element) throw new Error(`HER Voice UI element is missing: ${id}`);
+    if (!element) throw new Error(`Open OS1 UI element is missing: ${id}`);
     return element;
   };
   const el = Object.fromEntries([
     "voice-app", "connection-label", "history-button", "settings-button",
     "mode-notice", "error-notice", "error-message", "error-settings",
     "sound-canvas", "waveform", "user-caption", "user-caption-text",
-    "main-caption", "supporting-caption", "interrupt-button", "latency-label",
-    "text-composer", "message-input", "send-button", "composer-hint",
+    "main-caption", "supporting-caption", "interrupt-button",
+    "text-composer", "message-input", "send-button",
     "mic-button", "mic-label", "captions-button", "call-button", "call-label",
-    "sound-button", "keyboard-button", "architecture-label", "mode-button",
+    "sound-button", "keyboard-button", "mode-button",
     "mode-button-label", "settings-dialog", "history-dialog", "mic-device",
-    "output-device", "device-help", "captions-setting", "barge-in-setting",
+    "output-device", "captions-setting", "barge-in-setting",
     "service-mode", "service-engine", "service-profile", "service-key", "history-scroll",
     "history-empty", "history-list", "clear-history", "announcer",
     "voice-backend", "voice-select", "voice-name", "voice-transcript", "voice-file",
@@ -132,9 +132,6 @@ export function createUI(actions = {}) {
   function updateComposer() {
     const hasText = el["message-input"].value.trim().length > 0;
     el["send-button"].disabled = !connected() || snapshot.paused || !hasText;
-    el["composer-hint"].textContent = snapshot.paused
-      ? "先恢复对话，再发送消息"
-      : connected() ? "Enter 发送 · Shift + Enter 换行" : "开始通话后即可发送消息";
     const input = el["message-input"];
     input.style.height = "auto";
     input.style.height = `${Math.min(input.scrollHeight, 110)}px`;
@@ -300,9 +297,6 @@ export function createUI(actions = {}) {
       }
       el[id].value = value;
     }
-    el["device-help"].textContent = snapshot.mode === "demo"
-      ? "演示模式不会要求麦克风权限。真实连接时会列出可用设备。"
-      : devices.length ? "设备由当前浏览器提供；变更会应用至当前对话。" : "开始通话并允许麦克风后，会显示可用设备。";
   }
 
   function renderHistory() {
@@ -334,7 +328,7 @@ export function createUI(actions = {}) {
         messageNodes.set(key, row);
       }
       row.dataset.role = message.role;
-      row.querySelector(".message-role").textContent = message.role === "user" ? "你" : "HER";
+      row.querySelector(".message-role").textContent = message.role === "user" ? "你" : "Open OS1";
       const statusLabels = { interrupted: "已打断", cancelled: "已停止", failed: "未完成", streaming: message.role === "user" ? "辨识中" : "回复中", partial: "辨识中" };
       row.querySelector(".message-status").textContent = statusLabels[message.status] || "";
       row.querySelector(".message-text").textContent = text(message.text);
@@ -353,8 +347,8 @@ export function createUI(actions = {}) {
     const duration = Number.isFinite(voice?.duration_seconds) ? `${voice.duration_seconds.toFixed(1)} 秒` : "";
     const sampleRate = Number.isFinite(voice?.sample_rate) ? `${(voice.sample_rate / 1000).toFixed(1)} kHz` : "";
     el["voice-details"].textContent = voice
-      ? [duration, sampleRate, text(voice.transcript)].filter(Boolean).join(" · ")
-      : "请导入参考录音，或选择已保存的音色。";
+      ? [duration, sampleRate].filter(Boolean).join(" · ")
+      : "";
     el["voice-apply-button"].disabled = Boolean(admin.loading || admin.busy || !admin.config || !voice);
   }
 
@@ -432,21 +426,21 @@ export function createUI(actions = {}) {
     el["connection-label"].textContent = isConnected ? stateLabels[voiceState] : connection === "disconnected" ? "准备通话" : connectionLabel;
     el["sound-canvas"].setAttribute("aria-label", snapshot.voiceAdmin?.busy ? "正在应用声音设置" : connection === "connecting" ? "取消连接" : !isConnected ? "开始通话" : paused ? "恢复对话" : ["thinking", "speaking"].includes(voiceState) ? "打断回复" : "暂停对话");
     el["mode-notice"].hidden = !demo;
-    el["mode-notice"].textContent = "演示模式 · 协议演练／测试音，不使用麦克风或 API";
+    el["mode-notice"].textContent = "演示";
     el["mode-button-label"].textContent = demo ? "切回真实连接" : "试用演示";
     el["mode-button"].setAttribute("aria-label", demo ? "切换至真实语音连接" : "切换至演示模式，不使用麦克风或 API");
-    const applicationName = text(snapshot.health?.app_name) || "HER Voice";
-    const genericProvider = snapshot.health?.provider === "openai-compatible";
+    const applicationName = text(snapshot.health?.app_name) || "Open OS1";
+
     document.title = applicationName;
+    document.querySelector(".brand").textContent = applicationName;
     const wordmark = document.querySelector(".wordmark");
     if (wordmark) {
       wordmark.setAttribute("aria-label", `${applicationName} 首页`);
-      wordmark.querySelector(".wordmark-her").textContent = applicationName === "HER Voice" ? "HER" : applicationName;
-      wordmark.querySelector(".wordmark-voice").hidden = applicationName !== "HER Voice";
-      wordmark.querySelector(".wordmark-divider").hidden = applicationName !== "HER Voice";
+      wordmark.querySelector(".wordmark-her").textContent = applicationName;
+      wordmark.querySelector(".wordmark-voice").hidden = true;
+      wordmark.querySelector(".wordmark-divider").hidden = true;
     }
     document.querySelectorAll(".panel-context").forEach(element => { element.textContent = applicationName; });
-    el["architecture-label"].textContent = demo ? "演示演练 · 测试音频" : genericProvider ? "本机听说 · 应用 Agent 对话" : "本机听说 · DeepSeek 对话";
     el["error-notice"].hidden = !text(snapshot.error);
     el["error-message"].textContent = text(snapshot.error);
 
@@ -486,21 +480,14 @@ export function createUI(actions = {}) {
     el["main-caption"].textContent = showTranscript ? text(snapshot.caption.assistant) : heading;
     el["main-caption"].classList.toggle("has-transcript", showTranscript);
     el["supporting-caption"].textContent = supporting;
-    el["main-caption"].hidden = connection === "disconnected";
-    el["supporting-caption"].hidden = connection === "disconnected";
+    const showConnectionDetail = ["connecting", "error"].includes(connection);
+    el["main-caption"].hidden = !showTranscript && !showConnectionDetail;
+    el["supporting-caption"].hidden = !showConnectionDetail;
     const showUser = Boolean(snapshot.settings.captions && isConnected && text(snapshot.caption.user));
     el["user-caption"].hidden = !showUser;
     el["user-caption-text"].textContent = text(snapshot.caption.user);
     el["user-caption-text"].title = text(snapshot.caption.user);
     el["interrupt-button"].hidden = !isConnected || !["thinking", "speaking"].includes(voiceState);
-    const firstAudio = snapshot.metrics.firstAudioMs;
-    const timing = snapshot.metrics.server;
-    const timingParts = timing ? [['辨识', timing.sttMs], ['回答首字', timing.llm_ttftMs], ['回答生成全程', timing.llmMs], ['语音合成首段', timing.tts_ttfaMs],
-      ['停顿判定', timing.vad_decisionMs], ['等待续说', timing.holdMs], ['服务器首音', timing.e2eMs]] : [];
-    el["latency-label"].title = timingParts.filter(([, ms]) => Number.isFinite(ms)).map(([name, ms]) => `${name} ${(ms / 1000).toFixed(2)} 秒`).join('；');
-    el["latency-label"].hidden = !isConnected || !Number.isFinite(firstAudio) || firstAudio < 0;
-    el["latency-label"].textContent = Number.isFinite(firstAudio) && firstAudio >= 0 ? `事件至播放约 ${(firstAudio / 1000).toFixed(2)} 秒` : "";
-
     el["mic-button"].disabled = !isConnected;
     el["mic-button"].setAttribute("aria-pressed", String(paused));
     el["mic-button"].setAttribute("aria-label", paused ? "继续通话" : "暂停通话");
@@ -526,7 +513,7 @@ export function createUI(actions = {}) {
     renderVoiceSettings();
     updateComposer();
     sound.setState(isConnected ? voiceState : connection === "connecting" ? "thinking" : "idle", isConnected);
-    announce(`${demo ? "演示模式，" : ""}${connectionLabel}。${heading}`);
+    announce(`${demo ? "演示模式，" : ""}${connectionLabel}${showConnectionDetail ? "。" + heading : ""}`);
   }
 
   render();

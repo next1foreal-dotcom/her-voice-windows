@@ -37,7 +37,7 @@ import('./provider-settings.js').then(({attachProviderSettings}) => {
 }).catch(() => {
   if (disposed) return;
   const notice = document.getElementById('provider-message');
-  notice.textContent = '请重新启动 HER Voice 本机服务以加载回答接口设置。';
+  notice.textContent = '请重新启动 Open OS1 本机服务以加载回答接口设置。';
   notice.className = 'voice-admin-error';
   notice.hidden = false;
 });

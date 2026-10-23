@@ -131,7 +131,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .cap h1,.cap p{margin:0;font:inherit;letter-spacing:0;white-space:pre-wrap}
 .cap .user-caption{font-size:14px}
 .cap .supporting-caption{font-size:14px;opacity:.8}
-.cap:has(#main-caption[hidden]):has(#user-caption[hidden]){display:none}
+.cap:has(#main-caption[hidden]):has(#user-caption[hidden]):has(#supporting-caption[hidden]):has(#interrupt-button[hidden]){display:none}
 .response-details{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:12px}
 .interrupt-button{padding:6px 10px;border:1px solid var(--line);border-radius:999px;background:transparent;font:inherit}
 .key-hint{font-size:11px;margin-left:8px}
