@@ -18,7 +18,7 @@ const INITIAL = {
 };
 
 const STATE_COPY = {
-  idle: ["準備好聽你說。", "從一個念頭，開始一段對話。"],
+  idle: ["把想法，說出來。", "不必整理好才開口。從第一句，慢慢開始。"],
   listening: ["我在聽，請說。", "可以自然說話，也可以隨時插話。"],
   thinking: ["讓我想一想。", "正在生成回覆。"],
   speaking: ["正在回覆你。", "你可以直接開口打斷我。"],
@@ -66,7 +66,7 @@ export function createUI(actions = {}) {
   const el = Object.fromEntries([
     "voice-app", "connection-label", "history-button", "settings-button",
     "mode-notice", "error-notice", "error-message", "error-settings",
-    "sound-canvas", "waveform", "user-caption", "user-caption-text",
+    "sound-canvas", "waveform", "orb-button", "orb-hint", "user-caption", "user-caption-text",
     "main-caption", "supporting-caption", "interrupt-button", "latency-label",
     "text-composer", "message-input", "send-button", "composer-hint",
     "mic-button", "mic-label", "captions-button", "call-button", "call-label",
@@ -77,6 +77,8 @@ export function createUI(actions = {}) {
     "history-empty", "history-list", "clear-history", "announcer",
     "voice-backend", "voice-select", "voice-name", "voice-transcript", "voice-file",
     "voice-import-form", "voice-import-button", "voice-apply-button", "voice-refresh-button",
+    "theme-button", "focus-button", "engine-summary", "privacy-copy", "stage-state", "control-hint", "conversation-starters",
+    "transcript-list", "transcript-scroll", "transcript-empty", "transcript-count",
     "voice-admin-message", "voice-admin-error", "voice-current", "voice-details", "voice-import-details",
   ].map((id) => [id, byId(id)]));
 
@@ -96,9 +98,7 @@ export function createUI(actions = {}) {
   let importedVoiceId = "";
   let composerOpen = false;
   let restoreFocus = null;
-  let layoutSpace = "";
   const messageNodes = new Map();
-  const captionStage = el["main-caption"].closest(".caption-stage");
 
   const invoke = (name, ...args) => {
     if (typeof actions[name] === "function") return actions[name](...args);
@@ -106,6 +106,12 @@ export function createUI(actions = {}) {
   };
   const listen = (target, name, handler) => target.addEventListener(name, handler, { signal });
   const connected = () => snapshot.connection === "connected";
+  const orbState = () => (snapshot.paused || snapshot.state === "paused") && connected() ? "paused" : snapshot.state;
+  function orbAction() {
+    if (snapshot.voiceAdmin?.busy || snapshot.connection === "connecting") return "";
+    if (!connected()) return "onStart";
+    return ["thinking", "speaking"].includes(orbState()) ? "onInterrupt" : "onPause";
+  }
 
   function announce(value) {
     if (value && value !== lastAnnouncement) {
@@ -113,6 +119,67 @@ export function createUI(actions = {}) {
       lastAnnouncement = value;
     }
   }
+
+  const settingsTabs = Array.from(document.querySelectorAll("[data-settings-tab]"));
+  function selectSettingsTab(name, focus = false) {
+    for (const tab of settingsTabs) {
+      const selected = tab.dataset.settingsTab === name;
+      tab.setAttribute("aria-selected", String(selected));
+      tab.tabIndex = selected ? 0 : -1;
+      const section = byId(tab.getAttribute("aria-controls"));
+      section.hidden = !selected;
+      if (selected && focus) tab.focus();
+    }
+    const body = el["settings-dialog"].querySelector(".panel-body");
+    body.scrollTop = 0;
+  }
+  for (const tab of settingsTabs) {
+    listen(tab, "click", () => selectSettingsTab(tab.dataset.settingsTab));
+    listen(tab, "keydown", event => {
+      const index = settingsTabs.indexOf(tab);
+      const keys = { ArrowRight: (index + 1) % settingsTabs.length, ArrowLeft: (index + settingsTabs.length - 1) % settingsTabs.length, Home: 0, End: settingsTabs.length - 1 };
+      if (!Object.hasOwn(keys, event.key)) return;
+      event.preventDefault();
+      selectSettingsTab(settingsTabs[keys[event.key]].dataset.settingsTab, true);
+    });
+  }
+
+  // Follow the OS until the user explicitly chooses an appearance.
+  const systemTheme = matchMedia("(prefers-color-scheme: dark)");
+  let themeChoice = "";
+  try { themeChoice = localStorage.getItem("her-voice-theme") || ""; } catch { /* Optional preference. */ }
+  if (!["dark", "light"].includes(themeChoice)) themeChoice = "";
+  function applyTheme() {
+    if (themeChoice) document.documentElement.dataset.theme = themeChoice;
+    else delete document.documentElement.dataset.theme;
+    const dark = themeChoice ? themeChoice === "dark" : systemTheme.matches;
+    const label = dark ? "切換為淺色外觀" : "切換為深色外觀";
+    el["theme-button"].setAttribute("aria-label", label);
+    el["theme-button"].title = label;
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", dark ? "#101412" : "#f5f6f2");
+  }
+  applyTheme();
+  listen(systemTheme, "change", applyTheme);
+  listen(el["theme-button"], "click", () => {
+    const dark = themeChoice ? themeChoice === "dark" : systemTheme.matches;
+    themeChoice = dark ? "light" : "dark";
+    try { localStorage.setItem("her-voice-theme", themeChoice); } catch { /* Remains in memory. */ }
+    applyTheme();
+  });
+  listen(el["focus-button"], "click", () => {
+    const focus = el["voice-app"].dataset.focus !== "true";
+    el["voice-app"].dataset.focus = String(focus);
+    el["focus-button"].setAttribute("aria-pressed", String(focus));
+    el["focus-button"].setAttribute("aria-label", focus ? "離開專注模式" : "開啟專注模式");
+    el["focus-button"].title = focus ? "離開專注模式" : "專注模式";
+  });
+  document.querySelectorAll("[data-toggle-mode]").forEach(button => listen(button, "click", () => invoke("onModeChange", snapshot.mode === "demo" ? "live" : "demo")));
+  document.querySelectorAll("[data-open-history]").forEach(button => listen(button, "click", () => openPanel(el["history-dialog"])));
+  document.querySelectorAll("[data-open-settings]").forEach(button => listen(button, "click", () => openPanel(el["settings-dialog"])));
+  document.querySelectorAll("[data-prompt]").forEach(button => listen(button, "click", () => {
+    el["message-input"].value = button.dataset.prompt;
+    setComposer(true);
+  }));
 
   function closePanels() {
     for (const panel of [el["settings-dialog"], el["history-dialog"]]) {
@@ -124,6 +191,10 @@ export function createUI(actions = {}) {
     if (panel.open) return;
     closePanels();
     restoreFocus = document.activeElement;
+    if (panel === el["settings-dialog"] && focusTarget) {
+      const section = focusTarget.closest("[role=tabpanel]");
+      if (section) selectSettingsTab(section.id.replace("settings-", ""));
+    }
     panel.showModal();
     if (panel === el["settings-dialog"]) invoke("onLoadVoiceSettings");
     if (focusTarget) focusTarget.focus({ preventScroll: true });
@@ -138,27 +209,13 @@ export function createUI(actions = {}) {
     const input = el["message-input"];
     input.style.height = "auto";
     input.style.height = `${Math.min(input.scrollHeight, 110)}px`;
-    syncLayoutSpace();
-  }
-
-  function syncLayoutSpace() {
-    const composer = el["text-composer"];
-    const composerSpace = composerOpen
-      ? composer.getBoundingClientRect().height + (parseFloat(getComputedStyle(composer).marginBottom) || 0)
-      : 0;
-    const captionMinimum = parseFloat(getComputedStyle(captionStage).minHeight) || 0;
-    const captionOverflow = Math.max(0, captionStage.getBoundingClientRect().height - captionMinimum);
-    const signature = `${Math.ceil(composerSpace)}:${Math.ceil(captionOverflow)}`;
-    if (signature === layoutSpace) return;
-    layoutSpace = signature;
-    el["voice-app"].style.setProperty("--composer-space", `${Math.ceil(composerSpace)}px`);
-    el["voice-app"].style.setProperty("--caption-overflow", `${Math.ceil(captionOverflow)}px`);
   }
 
   function setComposer(open) {
     composerOpen = open;
     el["text-composer"].hidden = !open;
     el["voice-app"].dataset.composer = String(open);
+    el["conversation-starters"].hidden = open || connected() || snapshot.connection === "connecting";
     el["keyboard-button"].setAttribute("aria-expanded", String(open));
     el["keyboard-button"].setAttribute("aria-label", open ? "收起文字輸入" : "顯示文字輸入");
     el["interrupt-button"].querySelector(".key-hint").hidden = open;
@@ -169,14 +226,9 @@ export function createUI(actions = {}) {
         el["text-composer"].scrollIntoView({ block: "nearest", behavior: "auto" });
       }
     } else {
-      syncLayoutSpace();
       el["keyboard-button"].focus({ preventScroll: true });
     }
   }
-
-  const layoutObserver = new ResizeObserver(syncLayoutSpace);
-  layoutObserver.observe(captionStage);
-  layoutObserver.observe(el["text-composer"]);
 
   function submitMessage(event) {
     event?.preventDefault();
@@ -199,6 +251,12 @@ export function createUI(actions = {}) {
     invoke(snapshot.connection === "connected" || snapshot.connection === "connecting" ? "onStop" : "onStart");
   });
   listen(el["mic-button"], "click", () => invoke("onPause"));
+  listen(el["orb-button"], "click", () => {
+    const action = orbAction();
+    if (!action) return;
+    sound.pulse();
+    invoke(action);
+  });
   listen(el["captions-button"], "click", () => invoke("onSettingsChange", { captions: !snapshot.settings.captions }));
   listen(el["keyboard-button"], "click", () => setComposer(!composerOpen));
   listen(el["history-button"], "click", () => openPanel(el["history-dialog"]));
@@ -298,6 +356,8 @@ export function createUI(actions = {}) {
     historySignature = signature;
     const scroll = el["history-scroll"];
     const wasNearBottom = scroll.scrollHeight - scroll.scrollTop - scroll.clientHeight < 80;
+    const transcript = el["transcript-scroll"];
+    const transcriptAtBottom = transcript.scrollHeight - transcript.scrollTop - transcript.clientHeight < 80;
     const fragment = document.createDocumentFragment();
     const currentKeys = new Set();
     messages.forEach((message, index) => {
@@ -330,6 +390,12 @@ export function createUI(actions = {}) {
     el["history-list"].replaceChildren(fragment);
     el["history-empty"].hidden = messages.length > 0;
     el["clear-history"].disabled = messages.length === 0;
+    // Mirror only safe, text-populated nodes. Do not reparse model/user content.
+    el["transcript-list"].replaceChildren(...Array.from(el["history-list"].children, node => node.cloneNode(true)));
+    el["transcript-empty"].hidden = messages.length > 0;
+    el["transcript-count"].textContent = String(messages.length);
+    el["transcript-count"].setAttribute("aria-label", `${messages.length} 則訊息`);
+    if (transcriptAtBottom) transcript.scrollTop = transcript.scrollHeight;
     if (wasNearBottom) scroll.scrollTop = scroll.scrollHeight;
   }
 
@@ -340,7 +406,7 @@ export function createUI(actions = {}) {
     const sampleRate = Number.isFinite(voice?.sample_rate) ? `${(voice.sample_rate / 1000).toFixed(1)} kHz` : "";
     el["voice-details"].textContent = voice
       ? [duration, sampleRate, text(voice.transcript)].filter(Boolean).join(" · ")
-      : "请导入参考录音，或选择已保存的音色。";
+      : "請匯入參考錄音，或選擇已儲存的音色。";
     el["voice-apply-button"].disabled = Boolean(admin.loading || admin.busy || !admin.config || !voice);
   }
 
@@ -353,7 +419,7 @@ export function createUI(actions = {}) {
     if (listSignature !== voiceListSignature) {
       voiceListSignature = listSignature;
       const selected = el["voice-select"].value;
-      const options = [new Option(voices.length ? "请选择参考音色" : "请先导入一段参考录音", "")];
+      const options = [new Option(voices.length ? "請選擇參考音色" : "請先匯入一段參考錄音", "")];
       for (const voice of voices) options.push(new Option(text(voice.name) || voice.id, voice.id));
       el["voice-select"].replaceChildren(...options);
       el["voice-select"].value = voices.some(voice => voice.id === selected) ? selected : (config?.voice_id || "");
@@ -373,13 +439,13 @@ export function createUI(actions = {}) {
     const selected = voices.find(voice => voice.id === config?.voice_id);
     const label = config?.backend === "qwen3" ? "Qwen3-TTS Base" : "Drama 3";
     el["voice-current"].textContent = config
-      ? `${label} · ${selected ? text(selected.name) : "尚未选择参考音色"}`
-      : admin.loading ? "正在读取本机声音设置…" : "声音设置尚未读取";
+      ? `${label} · ${selected ? text(selected.name) : "尚未選擇參考音色"}`
+      : admin.loading ? "正在讀取本機聲音設定…" : "声音设置尚未读取";
     const busy = Boolean(admin.loading || admin.busy);
     el["voice-current"].setAttribute("aria-busy", String(busy));
     for (const id of ["voice-backend", "voice-select", "voice-name", "voice-transcript", "voice-file", "voice-import-button", "voice-refresh-button"]) el[id].disabled = busy;
-    el["voice-import-button"].textContent = admin.busy ? "正在处理…" : "保存参考音色";
-    el["voice-apply-button"].textContent = admin.busy ? "正在处理…" : "应用声音设置";
+    el["voice-import-button"].textContent = admin.busy ? "正在處理…" : "儲存參考音色";
+    el["voice-apply-button"].textContent = admin.busy ? "正在處理…" : "套用聲音設定";
     el["voice-admin-message"].textContent = text(admin.message);
     el["voice-admin-message"].hidden = !text(admin.message);
     el["voice-admin-error"].textContent = text(admin.error);
@@ -387,7 +453,7 @@ export function createUI(actions = {}) {
     renderVoiceDetails();
   }
 
-  const sound = createSoundField(el["sound-canvas"], el.waveform);
+  const sound = createSoundField(el["sound-canvas"], el.waveform, el["orb-button"]);
 
   function render(next = {}) {
     snapshot = {
@@ -418,6 +484,7 @@ export function createUI(actions = {}) {
     el["mode-notice"].hidden = !demo;
     el["mode-notice"].textContent = "示範模式 · 協定演練／測試音，不使用麥克風或 API";
     el["mode-button-label"].textContent = demo ? "切回真實連線" : "試用示範";
+    document.querySelectorAll("[data-mode-label]").forEach(label => { label.textContent = el["mode-button-label"].textContent; });
     el["mode-button"].setAttribute("aria-label", demo ? "切換至真實語音連線" : "切換至示範模式，不使用麥克風或 API");
     const applicationName = text(snapshot.health?.app_name) || "HER Voice";
     const genericProvider = snapshot.health?.provider === "openai-compatible";
@@ -499,7 +566,14 @@ export function createUI(actions = {}) {
     el["barge-in-setting"].checked = Boolean(snapshot.settings.bargeIn);
     el["service-mode"].textContent = demo ? "示範協定演練" : "真實連線";
     const engineLabels = { ready: "已就緒", starting: "載入中", failed: "啟動失敗", stopped: "尚未啟動", stopping: "停止中" };
-    el["service-engine"].textContent = engineLabels[snapshot.health?.engine?.state] || "尚未檢查";
+    const engineStatus = engineLabels[snapshot.health?.engine?.state] || "尚未檢查";
+    el["service-engine"].textContent = engineStatus;
+    el["engine-summary"].textContent = demo ? "示範模式 · 未使用引擎" : engineStatus;
+    el["privacy-copy"].textContent = demo ? "示範不採集麥克風、不呼叫 API，僅使用測試音。" : "語音在本機處理；對話文字傳送至所選模型。";
+    const stateLabels = { idle: "隨時開始", listening: "正在聆聽", thinking: "正在思考", speaking: "正在回覆", paused: "麥克風已暫停", interrupted: "已打斷回覆" };
+    el["stage-state"].textContent = connection === "connecting" ? "正在連線" : connection === "error" ? "需要檢查連線" : isConnected ? stateLabels[voiceState] : "隨時開始";
+    el["conversation-starters"].hidden = composerOpen || isConnected || connection === "connecting";
+    el["control-hint"].textContent = connection === "connecting" ? "準備中，可隨時取消連線" : !isConnected ? demo ? "點擊開始示範，或輕觸絲帶" : "點擊開始對話，或輕觸絲帶" : paused ? "輕觸絲帶或麥克風，繼續對話" : demo ? "示範使用測試音；可透過文字輸入演練" : ["speaking", "thinking"].includes(voiceState) ? "想接話時，輕觸絲帶即可打斷" : "自然開口就好，HER 正在聆聽";
     el["service-profile"].textContent = text(snapshot.health?.profile) || "尚未檢查";
     const providerReady = snapshot.health?.provider_ready ?? snapshot.health?.api_key_configured;
     el["service-key"].textContent = providerReady === true ? "設定已齊備，待實際連線" : providerReady === false ? "尚未設定" : "尚未檢查";
@@ -507,6 +581,13 @@ export function createUI(actions = {}) {
     renderHistory();
     renderVoiceSettings();
     updateComposer();
+    const orbCopy = !isConnected
+      ? connection === "connecting" ? ["正在連線", "正在連接語音服務"] : [demo ? "輕觸開始示範" : "輕觸開始", demo ? "開始示範" : "開始對話"]
+      : voiceState === "paused" ? ["輕觸繼續", "恢復麥克風"]
+        : ["thinking", "speaking"].includes(voiceState) ? ["輕觸打斷", "打斷回覆"] : ["輕觸暫停", "暫停麥克風"];
+    el["orb-hint"].textContent = orbCopy[0];
+    el["orb-button"].setAttribute("aria-label", orbCopy[1]);
+    el["orb-button"].disabled = Boolean(snapshot.voiceAdmin?.busy) || connection === "connecting";
     sound.setState(isConnected ? voiceState : connection === "connecting" ? "thinking" : "idle", isConnected);
     announce(`${demo ? "示範模式，" : ""}${connectionLabel}。${heading}`);
   }
@@ -517,187 +598,318 @@ export function createUI(actions = {}) {
     setLevels(input = 0, output = 0) { sound.setLevels(finiteLevel(input), finiteLevel(output)); },
     destroy() {
       controller.abort();
-      layoutObserver.disconnect();
       sound.destroy();
       closePanels();
     },
   };
 }
 
-/** Live, procedural sound visualization. No inferred/synthetic mic readings. */
-function createSoundField(canvas, waveform) {
-  const context = canvas.getContext("2d");
-  const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
-  const bars = Array.from({ length: 33 }, () => {
-    const bar = document.createElement("span");
-    waveform.append(bar);
-    return bar;
-  });
-  let width = 1;
-  let height = 1;
-  let ratio = 1;
-  let frame = 0;
-  let lastFrame = 0;
-  let input = 0;
-  let output = 0;
-  let envelope = 0;
-  let state = "idle";
-  let active = false;
-  let destroyed = false;
+/* Her Voice Win / OS¹ reference-fit reconstruction.
+ * Procedural WebGL ribbon; Canvas2D fallback. No video, image, texture, atlas,
+ * or per-frame vector playback. Analytic curve + compact Fourier deformation/width/opacity functions each tick.
+ * Original used only for offline fitting and side-by-side QA.
+ * The annular ribbon de-twists into a single ring using the same mesh.
+ * Frontend only: voice backend is NOT connected. */
+(function(global){
+'use strict';
+const FIT={"R":246.47314884694768,"H":56.23224548129997,"ex":0.19488482263878898,"K":4.066937804453259,"t0":1.9117729371420353,"w":-10.863007899287409,"W":21.099525550778324,"b0":1.3352040524110054,"b1":-1.0329263981839685,"amin":0.03466537834674127,"amax":0.8056924170245459,"contrast":-0.3208459500996237,"ringR":98.5,"ringW":17,"ringDY":45};
+const FIELD={"spatial":12,"temporal":4,"cx":[-0.141632,-1.216982,0.029258,1.222655,0.484328,3.487129,-0.371835,0.053386,0.132915,0.826048,0.050531,-0.145336,-0.058419,0.354745,0.032107,0.014517,-0.007036,-0.180696,-0.020551,-0.003359,-0.008739,-0.094189,0.018478,-0.019312,0.006058,0.064042,-0.185681,0.061068,0.372894,0.356778,0.069031,1.265134,-0.121621,0.162958,-0.101676,-0.566661,-0.028936,0.009162,-0.001069,0.109015,0.011171,0.001238,-0.008324,0.010819,-0.004029,0.002856,-0.00382,-0.011415,0.002993,-8e-06,-0.16299,-0.224955,0.276685,0.067597,3.606705,-0.197003,-0.034662,0.194538,0.146337,-0.283976,-0.059301,0.028041,0.195701,-0.038042,-0.070808,0.008037,0.018792,-0.008042,-0.01849,0.017447,-0.004879,-0.004037,0.003324,-0.00711,-0.004635,0.017893,3.053546,-0.215373,-0.117168,-0.347075,-1.478214,0.240574,-0.250134,-0.062399,-0.865301,0.0216,0.021895,-0.008058,-0.005288,0.013419,0.035049,0.043431,-0.012569,0.00712,0.01807,0.000698,0.020101,-0.004813,0.006742,-0.005219,1.188253,-0.272179,0.220016,-0.984184,0.050889,0.367453,0.099848,-1.232392,0.068778,0.153123,-0.023424,0.061513,-0.04207,-0.038895,0.02062,0.161292,-0.007918,0.003776,-0.013101,0.012811,-0.000794,0.000748,0.005759,-0.008373,-0.000265,0.199958,0.047391,0.951945,-0.145109,-0.113065,-0.017591,0.931573,-0.05766,-0.103744,0.020019,0.112397,0.0269,-0.019922,0.01295,-0.035828,0.008435,-0.008021,-0.00161,0.002156,0.007394,-0.000277,0.002027,0.000696,-0.003155,0.000274,-0.039125,-0.037606,-0.20288,0.06566,-0.097803,0.089125,-0.130916,-0.046617,-0.32435,0.148826,0.032377,-0.008416,-0.155435,0.01854,0.045432,-0.007926,-0.005311,0.00447,0.011772,0.000712,0.001951,0.000308,-0.001637,0.000806,-0.003431,-0.012071,-0.153746,0.077414,0.043872,0.12176,-0.126792,-0.019149,0.112381,0.057867,0.245122,-0.005012,0.029599,-0.022668,0.155639,-0.003442,-0.041508,-0.025943,-0.004922,-0.005939,-0.018354,0.003405,-0.010722,0.006664,-0.001135,0.004745,0.206081,-0.023477,-0.031991,-0.004973,-0.018334,0.009307,-0.053924,0.005198,0.004197,-0.062497,-0.00712,0.044703,0.004151,-0.028628,0.005445,-0.007017,0.00015,0.001737,-0.002258,-0.030436,0.005446,-0.000794,0.001062,0.001617,-0.003763],"cy":[-0.309524,1.135516,-0.15516,0.154266,0.049349,-1.56104,-0.162804,0.244701,-0.059599,0.14401,0.11897,0.003167,0.017298,0.083994,-0.014589,-0.029782,-0.00234,0.086281,-0.017739,0.010659,0.003017,-0.067634,0.011932,-0.009784,-0.000567,0.503282,-0.069362,1.769806,-0.734473,0.144803,0.087024,-0.568537,0.066969,-0.016957,0.092263,0.064508,0.094422,-0.003315,-0.035066,0.144434,-0.031401,-0.021459,-0.003563,-0.017919,0.008243,0.015856,0.003194,-0.029855,-0.00206,-0.003159,0.31312,-0.341195,-0.494155,-0.44616,1.826967,0.224702,-0.17629,0.20985,1.908321,0.163344,0.283494,-0.022614,-1.446551,-0.050105,-0.164049,-0.042326,0.320979,-0.014107,0.033987,0.044579,0.025529,0.005387,0.00492,-0.026106,-0.028856,0.390639,0.427858,0.190218,0.041805,0.264822,0.353913,0.074793,-0.393338,-0.115156,-0.318957,-0.067242,-0.046572,0.048299,0.028911,0.009363,0.053598,-0.02099,0.001883,0.009165,-0.01317,-0.0017,-0.047221,-0.005351,0.005178,0.003511,1.221777,-0.175051,-0.040162,-0.037894,-0.177989,0.147046,-0.073862,-1.127815,0.059665,0.008628,0.043436,0.288572,-0.001637,-0.013049,-0.051773,0.062702,-0.014724,0.01885,0.026932,-0.108303,0.011873,-0.004906,-0.004234,0.060935,-0.004917,0.122165,-0.08785,0.620184,0.11848,-0.311574,0.154782,0.36633,-0.118989,0.054537,-0.128909,-0.499782,-0.03731,0.074644,0.031089,0.024409,0.023377,-0.042019,0.007212,-1.5e-05,-0.006201,0.013354,-0.00237,0.04505,-0.001989,-0.001137,-0.054291,0.090575,-0.212576,0.053469,-0.561302,-0.082004,-0.103248,-0.047809,0.073528,-0.101783,0.172959,-0.005595,0.073284,0.037695,-0.018967,0.029275,-0.055572,0.013131,0.004324,-0.010115,0.05567,-0.002637,-0.008009,0.001303,-0.039204,-0.154002,0.214781,-0.030752,-0.013326,0.041697,-0.415746,-0.000322,0.143636,-0.029977,-0.123385,0.014988,0.011479,-0.052865,0.141988,-0.004713,-0.015966,0.031673,0.023341,-0.00573,0.001326,0.002824,-0.023071,0.00257,-0.001744,-0.004567,0.007186,-0.018303,0.006069,-0.034296,-0.030447,0.05,-0.004742,-0.03798,0.030502,0.012056,0.027087,0.062713,-0.002976,-0.035444,0.015206,0.039432,-0.008164,-0.002136,-0.012852,-0.02225,0.006458,0.006297,0.001065,0.001223,-0.002651],"cw":[2.477207,-0.070361,0.080545,-0.031339,-0.015547,-0.029435,0.126606,-0.004031,0.001489,-0.008455,0.06,-0.005059,0.01104,-0.002184,0.00151,-0.003992,0.002126,-0.00261,-0.004624,0.000784,-0.001779,0.003753,0.010018,0.000364,0.00222,0.030178,0.265007,-0.016908,0.057016,0.006479,0.080714,0.006653,0.012541,-0.016222,-0.050609,0.00339,-0.005029,-0.029123,0.014156,-0.003955,0.002081,0.005694,-0.003337,0.002531,0.000772,-0.002576,0.000345,-0.000403,0.000184,0.000996,-0.080184,-0.013324,0.069427,-0.058824,-0.021679,0.007121,0.073657,-0.056032,-0.01218,-0.00806,2.9e-05,-0.056838,0.00796,-0.010193,0.023044,0.00107,-0.00074,0.001458,-0.000444,-0.000558,0.00149,0.002405,0.003247,0.000278,0.000163,0.031423,-0.154249,-0.015806,0.024348,-0.035134,0.113282,-0.31444,-0.035479,0.030375,-0.031219,0.132163,-0.005404,-0.00499,0.009473,-0.059593,0.01782,-0.003788,0.002148,0.01803,-0.005194,0.004482,0.000828,-0.004051,-0.001104,-0.001895,0.01777,-0.118529,-0.019857,0.072029,-0.354427,-0.052303,0.010097,-0.064876,0.213788,0.017362,-0.014152,0.035529,-0.081304,-0.010069,0.01146,-0.018088,0.014334,0.001313,-0.008052,0.00737,-0.003959,-0.003037,0.002382,-0.001219,0.000799,0.001344,0.012446,-0.000593,0.007036,0.045149,-0.037074,-0.005869,-0.014162,0.006966,0.010765,0.002732,0.001339,0.017521,0.037377,0.004276,0.006253,-0.004609,-0.012028,-0.002975,-0.002031,0.002135,0.005429,0.001747,4e-06,0.0011,-0.002614,-0.018161,0.007739,0.008169,-0.007923,0.024726,0.024379,0.054188,0.020665,-0.004025,-0.008634,0.035117,0.002448,0.001369,-0.016246,-0.015133,-0.008089,-0.001294,0.001666,0.011893,0.001915,-0.000526,-0.002879,-0.006414,0.000173,0.04229,0.014805,0.008085,0.009528,-0.026442,-0.014638,0.030937,-0.031797,-0.004622,-0.009067,0.028206,0.042509,0.02243,0.006167,-0.013712,-0.034407,-0.015808,0.001473,-0.002161,0.010671,0.007546,-0.00413,0.005283,-0.004722,-0.004324,-0.01914,-0.017142,-0.020418,-0.008558,0.011505,0.005037,-0.0077,0.019348,0.012957,0.028512,0.028149,-0.008631,-0.020777,-0.029298,-0.026135,0.005424,0.003242,0.019388,0.011752,-0.004287,0.005001,-0.005782,-0.004685,0.001333,-0.003554],"ca":[-1.186474,0.013877,0.00324,-0.116586,0.011761,-0.017141,0.000252,0.300225,0.009731,0.004602,0.007164,-0.076058,0.005019,-0.007753,-0.003781,0.014425,0.000895,-0.000891,-0.009454,0.011822,-0.007114,0.012887,0.013504,-0.008568,0.003286,0.016115,0.062567,0.049663,0.024615,0.364397,-0.01809,0.030171,-0.003617,0.177569,-0.005669,-0.052255,0.003837,-0.280289,-0.004731,-0.004323,0.005421,0.215109,-0.006579,0.013475,-0.007386,-0.114482,0.000166,-0.002346,0.004463,0.04136,0.025687,0.014554,0.946443,0.048548,-0.141746,0.012017,0.668901,0.002529,-0.041398,-0.013227,-0.416884,0.003263,0.030685,-0.005833,0.243355,0.006924,0.009211,0.006108,-0.138605,-0.004327,-0.00586,-0.004537,0.055497,0.010834,-6.1e-05,0.156186,-0.104619,0.018483,-0.014087,0.005326,0.099562,-0.050172,-0.144237,0.013104,0.055325,0.020941,0.01574,1.1e-05,-0.019981,-0.029922,-0.018371,-0.016319,-0.005898,0.007578,0.000487,0.011545,-0.002744,-0.005075,0.016754,-0.000575,-0.012313,-0.139995,0.016535,0.02235,-0.15255,0.118477,0.000843,0.02774,0.04806,0.086719,-0.017394,0.00322,-0.018242,-0.07253,0.019381,-0.029845,0.00492,0.040382,-0.013731,0.012718,0.003646,-0.006092,0.004915,0.002878,0.003359,-0.001233,-0.083055,0.049958,-0.021721,-0.069849,0.037063,0.060593,-0.002111,-0.050336,0.032457,0.006766,0.020634,0.017218,0.007966,-0.003456,-0.000816,-0.009097,-0.002205,-0.004346,-0.005981,0.007244,0.002312,-0.003671,0.003001,-0.003167,0.024714,-0.020623,-0.056302,0.019258,0.070879,0.022492,-0.07294,-0.011595,0.000118,0.000422,0.000753,-0.003618,-0.043893,0.006921,0.004277,-0.01254,0.005211,-0.002625,0.001132,-0.00279,0.006289,0.00037,-0.001186,-0.000511,-0.005219,0.011039,0.056602,-0.006506,-0.026958,-0.049444,-0.035736,0.029873,-0.012146,-0.004196,-0.061719,0.008924,0.038083,0.019906,0.024009,0.005203,-0.029998,-0.017907,0.016536,0.005673,0.013092,0.00802,-0.010698,3e-05,-0.010294,-0.003361,-0.026191,-0.000676,-0.026831,-0.021287,0.060649,0.009999,0.002833,0.036799,0.027065,0.010662,0.039231,0.003231,-0.020184,-0.033391,-0.031307,0.012536,-0.001561,0.019172,0.013809,-0.003026,-0.001548,-0.004968,-0.001639,-0.00342,-0.001332]};
+const BG=[0xDC/255,0x5C/255,0x35/255]; // #DC5C35 固定
+const INK=[1.0,0.871,0.769];            // 暖象牙 #FFDEC4（原片圓環實測）
+const STATES=['idle','listening','thinking','speaking','interrupted'];
+const TARGET={ // 各狀態目標；所有量都經彈簧平滑，可中途改狀態
+  idle:       {m:0,spd:1.00,hm:1.00,rip:0,   pinch:0, lvl:0},
+  listening:  {m:0,spd:0.55,hm:0.82,rip:0.35,pinch:0, lvl:1},
+  thinking:   {m:1,spd:1.00,hm:1.00,rip:0,   pinch:0, lvl:0},
+  speaking:   {m:0,spd:1.25,hm:1.05,rip:1.0, pinch:0, lvl:1},
+  interrupted:{m:0,spd:0.30,hm:0.40,rip:0,   pinch:1, lvl:0},
+};
+const N=640, M=8, RN=240;
+function sstep(a,b,x){x=Math.min(1,Math.max(0,(x-a)/(b-a)));return x*x*(3-2*x)}
+class Spring{constructor(v,k){this.v=v;this.d=0;this.k=k}
+  step(t,dt){const k=this.k,a=k*k*(t-this.v)-2*k*this.d;this.d+=a*dt;this.v+=this.d*dt;return this.v}}
 
-  function drawBars(time) {
-    const level = state === "paused" ? 0 : active ? Math.max(input, output) : 0;
-    for (let i = 0; i < bars.length; i += 1) {
-      const distance = Math.abs(i - 16) / 16;
-      const falloff = Math.pow(Math.max(0, 1 - distance), 1.4);
-      // The disconnected, static motif is visual identity, never a mic meter.
-      const idleShape = !active ? (Math.sin(i * 1.61) ** 2) * falloff * 19 : 0;
-      const liveShape = level * falloff * (13 + 31 * Math.abs(Math.sin(i * .9 + time * 4)));
-      const barHeight = Math.min(44, 2 + idleShape + liveShape);
-      bars[i].style.height = `${barHeight.toFixed(1)}px`;
-      bars[i].style.opacity = `${(.35 + .55 * falloff).toFixed(2)}`;
-    }
+class OS1Ribbon{
+  constructor(canvas,opts={}){
+    this.cv=canvas;this.events=new AbortController();this.opts=opts;this.state='idle';this.level=0;this.lvS=0;
+    this.sp={m:new Spring(0,4.6),spd:new Spring(1,4),hm:new Spring(1,6),rip:new Spring(0,6),pinch:new Spring(0,9),lvl:new Spring(0,8)};
+    this.theta=FIT.t0;this.time=0;this.listeners={};this.reduced=!!opts.reducedMotion;
+    this.buf=new Float32Array(((M+1)*N+RN)*6*7);this.order=new Uint16Array(N);this.zs=new Float32Array(N);
+    this.G=new Float32Array(N*(M+1)*7);this.C=new Float32Array(N);this.F=new Float32Array(N);this.P=new Float32Array(N*2);this.O=new Float32Array(N*2);this.A=new Float32Array(N);this.Z=new Float32Array(N);
+    this.mode='none';this._init(opts.renderer);
+    this.resize();
   }
-
-  function draw(milliseconds = 0) {
-    if (!context || destroyed) return;
-    const time = reducedMotion.matches ? 0 : milliseconds / 1000;
-    const target = state === "paused" ? 0 : active ? Math.max(input, output) : 0;
-    envelope += (target - envelope) * .13;
-    context.setTransform(ratio, 0, 0, ratio, 0, 0);
-    context.clearRect(0, 0, width, height);
-    const radius = Math.min(width, height) * .425;
-    const centerX = width / 2;
-    const centerY = height / 2;
-    const motion = reducedMotion.matches ? 0 : time * (state === "thinking" ? .23 : .11);
-    const tilt = -.66 + Math.sin(motion * .4) * .035;
-    const cosTilt = Math.cos(tilt);
-    const sinTilt = Math.sin(tilt);
-    const rotation = .48;
-    const cosRotation = Math.cos(rotation);
-    const sinRotation = Math.sin(rotation);
-    const amplitude = reducedMotion.matches ? .035 : .035 + envelope * .065;
-    const bright = state === "paused" ? [174, 181, 174] : state === "thinking" ? [195, 216, 232] : [195, 234, 236];
-    const lineCount = width < 320 ? 49 : 65;
-    const points = 140;
-
-    for (const [x, y] of [[-.49, -.65], [.56, .58]]) {
-      const glowX = centerX + x * radius;
-      const glowY = centerY + y * radius;
-      const glow = context.createRadialGradient(glowX, glowY, 0, glowX, glowY, radius * .32);
-      glow.addColorStop(0, `rgba(${bright.join(",")},.075)`);
-      glow.addColorStop(.35, `rgba(${bright.join(",")},.025)`);
-      glow.addColorStop(1, `rgba(${bright.join(",")},0)`);
-      context.fillStyle = glow;
-      context.fillRect(glowX - radius * .32, glowY - radius * .32, radius * .64, radius * .64);
+  on(e,f){(this.listeners[e]||=[]).push(f);return this}
+  _emit(e,v){(this.listeners[e]||[]).forEach(f=>{try{f(v)}catch(err){console.error(err)}})}
+  _init(force){
+    this.gl=null;this.ctx=null;
+    if(force!=='2d'){
+      try{this.gl=this.cv.getContext('webgl',{antialias:true,alpha:false,premultipliedAlpha:true,preserveDrawingBuffer:!!this.opts.preserve})}catch(e){this.gl=null}
     }
-    context.lineWidth = Math.max(.6, Math.min(.82, width / 650));
-    context.lineJoin = "round";
-    for (let line = 0; line < lineCount; line += 1) {
-      const fraction = line / (lineCount - 1);
-      const latitude = (fraction - .5) * Math.PI * .96;
-      const ring = Math.cos(latitude);
-      const pole = Math.sin(latitude);
-      const alpha = .43 + .36 * (Math.abs(fraction - .5) * 2) + envelope * .08;
-      const gradient = context.createLinearGradient(centerX - radius, centerY - radius, centerX + radius, centerY + radius);
-      gradient.addColorStop(0, `rgba(${bright.join(",")},${alpha * .7})`);
-      gradient.addColorStop(.22, `rgba(${bright.join(",")},${Math.min(.98, alpha + .28)})`);
-      gradient.addColorStop(.49, `rgba(109,156,176,${alpha * .18})`);
-      gradient.addColorStop(.76, `rgba(${bright.join(",")},${Math.min(.96, alpha + .25)})`);
-      gradient.addColorStop(1, `rgba(133,195,207,${alpha * .85})`);
-      context.strokeStyle = gradient;
-      context.shadowColor = "rgba(163,222,231,.22)";
-      context.shadowBlur = 3;
-      context.beginPath();
-      let pathStarted = false;
-      for (let point = 0; point <= points; point += 1) {
-        const angle = (point / points) * Math.PI * 2;
-        const wave = Math.sin(angle * 3 + latitude * 2.5 + motion) * amplitude;
-        const asymmetry = 1 + Math.sin(angle * 2 - motion * .6 + latitude) * .04;
-        let x = ring * Math.cos(angle) * asymmetry;
-        let y = pole + Math.sin(angle * 2 + latitude * 1.7 + motion) * .16 * ring * ring;
-        let z = ring * Math.sin(angle) * (1 + wave);
-        const rotatedY = y * cosRotation - z * sinRotation;
-        z = y * sinRotation + z * cosRotation;
-        y = rotatedY;
-        // A single visible surface avoids the crossed front/back wireframe.
-        if (z < -.015) {
-          pathStarted = false;
-          continue;
-        }
-        const perspective = 1 + z * .075;
-        const screenX = (x * cosTilt - y * sinTilt) * radius * perspective;
-        const screenY = (x * sinTilt + y * cosTilt) * radius * perspective;
-        const px = centerX + screenX;
-        const py = centerY + screenY;
-        if (!pathStarted) context.moveTo(px, py);
-        else context.lineTo(px, py);
-        pathStarted = true;
+    if(this.gl&&this._initGL()){this.mode='webgl'}
+    else{this.gl=null;try{this.ctx=this.cv.getContext('2d')}catch(e){this.ctx=null}this.mode=this.ctx?'canvas2d':'none'}
+    if(!this._lossBound){this._lossBound=true;
+      this.cv.addEventListener('webglcontextlost',e=>{e.preventDefault();this.mode='lost';this._emit('error',{type:'context-lost'})},{signal:this.events.signal});
+      this.cv.addEventListener('webglcontextrestored',()=>{this._init();this.resize();this._emit('recovered',{mode:this.mode})},{signal:this.events.signal});}
+    this._emit('renderer',this.mode);
+  }
+  _initGL(){
+    const gl=this.gl;
+    const vs=`attribute vec2 p;attribute vec4 q;attribute float light;uniform vec2 res;varying vec4 v;varying float lit;
+      void main(){v=q;lit=light;gl_Position=vec4(p/res*2.-1.,0.,1.);gl_Position.y=-gl_Position.y;}`;
+    const fs=`precision mediump float;varying vec4 v;varying float lit;uniform vec3 ink;
+      void main(){
+        float edge=1.-smoothstep(1.-v.z,1.,abs(v.x));
+        // Matte broad shading, not parallel bright rails or a glossy tube.
+        float grain=1.-.008*fract(52.9829189*fract(dot(floor(gl_FragCoord.xy),vec2(.06711056,.00583715))));
+        // Broad warm transmission, anchored to the moving surface, not screen x.
+        float face=smoothstep(0.,1.,lit);
+        float crossBand=smoothstep(-1.,1.,v.x);
+        vec3 warm=vec3(1.,.735,.565);
+        vec3 pigment=mix(warm,ink,clamp(.36+.58*face+.06*crossBand,0.,1.));
+        float a=v.y*edge*grain*(.88+.12*crossBand);
+        gl_FragColor=vec4(pigment*a,a);
+      }`;
+    const sh=(t,s)=>{const o=gl.createShader(t);gl.shaderSource(o,s);gl.compileShader(o);
+      if(!gl.getShaderParameter(o,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(o));return o};
+    try{
+      const pr=gl.createProgram();gl.attachShader(pr,sh(gl.VERTEX_SHADER,vs));gl.attachShader(pr,sh(gl.FRAGMENT_SHADER,fs));
+      gl.linkProgram(pr);if(!gl.getProgramParameter(pr,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(pr));
+      this.pr=pr;this.vb=gl.createBuffer();this.aP=gl.getAttribLocation(pr,'p');this.aQ=gl.getAttribLocation(pr,'q');
+      this.aLight=gl.getAttribLocation(pr,'light');this.uRes=gl.getUniformLocation(pr,'res');this.uInk=gl.getUniformLocation(pr,'ink');return true;
+    }catch(err){this._emit('error',{type:'webgl-init',message:String(err)});return false}
+  }
+  resize(){
+    const dpr=Math.min(global.devicePixelRatio||1,2),r=this.cv.getBoundingClientRect();
+    const w=Math.max(1,Math.round((r.width||this.cv.width)*dpr)),h=Math.max(1,Math.round((r.height||this.cv.height)*dpr));
+    if(this.cv.width!==w||this.cv.height!==h){this.cv.width=w;this.cv.height=h}
+    const cw=w/dpr,ch=h/dpr;
+    // 桌面 1920×1080 → 1:1 原片比例；窄螢幕保證絲帶約佔 72% 寬
+    this.scale=Math.min(cw*0.72/560,ch*0.42/330,Math.max(cw/1920,ch/1080))*dpr;
+    if(this.opts.scale)this.scale=this.opts.scale*dpr;
+    this.dpr=dpr;
+    // Changing canvas size clears its buffer, including when animation is paused.
+    this._geom();this._draw();
+  }
+  setState(s){if(!STATES.includes(s))throw new Error('unknown state '+s);if(s===this.state)return;
+    const prev=this.state;this.state=s;this._emit('state',{state:s,prev})}
+  setLevel(v){this.level=Math.max(0,Math.min(1,+v||0))}
+  get progress(){return {m:this.sp.m.v,spd:this.sp.spd.v,hm:this.sp.hm.v,pinch:this.sp.pinch.v}}
+  /* 推進時間 dt 秒並繪製 */
+  tick(dt){
+    dt=Math.min(Math.max(dt,0),1/15);const T=TARGET[this.state];
+    this.lvS+=(this.level*T.lvl-this.lvS)*(1-Math.exp(-dt*16));
+    const L=this.lvS;
+    const sub=4;for(let i=0;i<sub;i++){const d=dt/sub;
+      this.sp.m.step(T.m,d);this.sp.spd.step(T.spd*(1+0.6*L*(this.state==='speaking')),d);
+      this.sp.hm.step(T.hm+(this.state==='listening'?0.45*L:this.state==='speaking'?0.5*L:0),d);
+      this.sp.rip.step(T.rip*L,d);this.sp.pinch.step(T.pinch,d);}
+    const rm=this.reduced?0.3:1;
+    this.theta+=FIT.w*this.sp.spd.v*rm*dt;this.time+=dt*rm;
+    this._geom();this._draw();
+  }
+  _geom(){
+    const F=FIT,m=Math.min(1,Math.max(0,this.sp.m.v)),hm=this.sp.hm.v,rip=this.sp.rip.v,pin=this.sp.pinch.v;
+    const S=this.scale,cx=this.cv.width/2,cy=this.cv.height/2-F.ringDY*S*sstep(0,1,m);
+    const fold=sstep(0,.85,m),settle=sstep(.55,.87,m),compact=fold,ex=F.ex;
+    const R=F.R*(1-.12*pin);
+    const H=F.H*hm*(1-.52*pin*(1-m));
+    const K=F.K,phase=this.theta;
+    // Evaluate compact Fourier functions, never a frame/path lookup table.
+    const sbasis=this._basis||(this._basis=Array.from({length:N},(_,i)=>{const u=i/N*Math.PI*2,b=[1];for(let k=1;k<=FIELD.spatial;k++)b.push(Math.cos(k*u),Math.sin(k*u));return b;}));
+    const tb=[1];for(let j=1;j<=FIELD.temporal;j++)tb.push(Math.cos(j*phase),Math.sin(j*phase));
+    const coefficients={};for(const name of ['cx','cy','cw','ca']){
+      const c=FIELD[name],r=new Float64Array(25);for(let k=0;k<25;k++)for(let j=0;j<tb.length;j++)r[k]+=c[j*25+k]*tb[j];coefficients[name]=r;
+    }
+    const widths=this._widths||(this._widths=new Float32Array(N)),opacity=this._opacity||(this._opacity=new Float32Array(N));
+    const deform=1;
+    const X=this._xyz||(this._xyz=new Float32Array(N*3)),B=this._frame||(this._frame=new Float32Array(N*3));
+    // A continuously twisted annular curve. Superellipse parameterization keeps
+    // the end turns round without long straight facets or under-sampled tips.
+    for(let i=0;i<N;i++){
+      const u=i/N*Math.PI*2,e=Math.sin(u),co=Math.cos(u);
+      const q=Math.sign(co)*Math.sqrt(Math.max(0,1-Math.pow(Math.abs(e),2/ex)));
+      const a=K*q+phase,ca=Math.cos(a),sa=Math.sin(a);
+      const yy=e*ca,zz=e*sa;
+      let fx=0,fy=0,fw=0,fa=0;const bs=sbasis[i];for(let k=0;k<25;k++){fx+=bs[k]*coefficients.cx[k];fy+=bs[k]*coefficients.cy[k];fw+=bs[k]*coefficients.cw[k];fa+=bs[k]*coefficients.ca[k];}
+      const originalX=R*q+fx+5*q*Math.pow(Math.abs(q),8),originalY=H*yy-fy*hm+H*.055*rip*Math.sin(5*u-this.time*9)*(1-m);
+      // The band folds into a tilted double loop, then unwinds to one circle. All
+      // positions belong to the same continuous mesh, including interruptions.
+      const psi=phase*.16+.65,rr=F.ringR;
+      const fx8=rr*.85*Math.sin(2*u),fy8=rr*Math.sin(u),ang=psi*(1-settle);
+      const coilX=(1-settle)*(Math.cos(ang)*fx8-Math.sin(ang)*fy8)+settle*rr*Math.cos(u);
+      const coilY=(1-settle)*(Math.sin(ang)*fx8+Math.cos(ang)*fy8)+settle*rr*Math.sin(u);
+      X[i*3]=(1-fold)*originalX+fold*coilX+35*Math.sin(Math.PI*m);
+      X[i*3+1]=(1-fold)*originalY+fold*coilY;
+      X[i*3+2]=(1-fold)*H*zz+fold*rr*.55*(1-settle)*Math.sin(u+psi);
+      widths[i]=Math.min(30,Math.max(.45,Math.exp(fw)));opacity[i]=Math.min(.98,Math.max(.025,Math.exp(fa)));
+      B[i*3]=q;B[i*3+1]=yy;B[i*3+2]=zz;
+    }
+    const P=this.P,O=this.O,A=this.A,Z=this.Z,G=this.G;
+    const width=(F.W+(F.ringW-F.W)*compact)*(1-.22*pin);
+    this.ringMix=0; // The SAME mesh becomes the ring; no ring cross-fade.
+    this.ring={x:cx,y:cy,r:F.ringR*S,w:F.ringW*S};
+    for(let i=0;i<N;i++){
+      const j=(i+1)%N,k=(i+N-1)%N,u=i/N*Math.PI*2;
+      let tx=X[j*3]-X[k*3],ty=X[j*3+1]-X[k*3+1],tz=X[j*3+2]-X[k*3+2];
+      const tl=Math.hypot(tx,ty,tz)||1;tx/=tl;ty/=tl;tz/=tl;
+      let nx=B[i*3],ny=B[i*3+1],nz=B[i*3+2],dot=nx*tx+ny*ty+nz*tz;
+      nx-=dot*tx;ny-=dot*ty;nz-=dot*tz;let nl=Math.hypot(nx,ny,nz);
+      if(nl<1e-6){const ax=Math.abs(tx)<.8?1:0,ay=ax?0:1,d=ax*tx+ay*ty;nx=ax-d*tx;ny=ay-d*ty;nz=-d*tz;nl=Math.hypot(nx,ny,nz)||1;}
+      nx/=nl;ny/=nl;nz/=nl;
+      const vx=ty*nz-tz*ny,vy=tz*nx-tx*nz,vz=tx*ny-ty*nx;
+      const beta=(F.b0+F.b1*B[i*3])*(1-settle),cb=Math.cos(beta),sb=Math.sin(beta);
+      const bx=cb*nx+sb*vx,by=cb*ny+sb*vy;
+      const x=cx+X[i*3]*S,y=cy-X[i*3+1]*S,z=X[i*3+2];
+      const screenLen=Math.hypot(tx,ty)||1;
+      const coilWidth=F.ringW*((.35+.65*Math.abs(Math.cos(u+phase*.16+.65)))*(1-settle)+settle);
+      const fittedWidth=(widths[i]+(coilWidth-widths[i])*compact)*(1+.35*Math.sin(Math.PI*m))*(1-.22*pin);
+      const ox=ty/screenLen*fittedWidth*.5*S,oy=tx/screenLen*fittedWidth*.5*S;
+      let alpha=Math.min(.98,opacity[i]*1.08);
+      const coilAlpha=(.25+.70*sstep(-1,1,-Math.sin(u+phase*.16+.65)))*(1-settle)+.94*settle;
+      alpha+=(coilAlpha-alpha)*fold;
+      P[i*2]=x;P[i*2+1]=y;O[i*2]=ox;O[i*2+1]=oy;A[i]=alpha;Z[i]=z;
+      const feather=Math.min(.95,.85*this.dpr/Math.max(.01,fittedWidth*.5*S));
+      for(let lane=0;lane<=M;lane++){
+        const v=lane/M*2-1;let at=(i*(M+1)+lane)*7;
+        G[at++]=x+O[i*2]*v;G[at++]=y+O[i*2+1]*v;G[at++]=v;G[at++]=alpha;G[at++]=feather;G[at++]=u;G[at++]=.5+.5*Math.tanh(z/Math.max(1,H*.75));
       }
-      context.stroke();
+      this.C[i]=0;this.F[i]=feather;this.order[i]=i;
     }
-    context.shadowBlur = 0;
-    drawBars(time);
+    for(let i=0;i<N;i++)this.zs[i]=(Z[i]+Z[(i+1)%N])*.5;
+    this.order.sort((a,b)=>this.zs[b]-this.zs[a]);
   }
 
-  function tick(milliseconds) {
-    frame = 0;
-    if (destroyed || document.hidden || reducedMotion.matches) return;
-    if (milliseconds - lastFrame >= 1000 / 30) {
-      lastFrame = milliseconds;
-      draw(milliseconds);
+  _draw(){
+    if(this.mode==='webgl')return this._drawGL();
+    if(this.mode==='canvas2d')return this._draw2D();
+  }
+  _drawGL(){
+    const gl=this.gl;if(gl.isContextLost())return;
+    const G=this.G,P=this.P,buf=this.buf;let o=0;
+    const raw=(x,y,v,a,f,u,light=1)=>{buf[o++]=x;buf[o++]=y;buf[o++]=v;buf[o++]=a;buf[o++]=f;buf[o++]=u;buf[o++]=light};
+    const put=(i,lane,wrap=false)=>{const a=(i*(M+1)+lane)*7;for(let k=0;k<7;k++)buf[o++]=G[a+k];if(wrap){buf[o-5]*=-1;buf[o-2]=Math.PI*2;}};
+    for(let n=0;n<N;n++){
+      const i=this.order[n],j=(i+1)%N,ui=i/N*Math.PI*2,uj=ui+Math.PI*2/N;
+      const coreAlpha=(this.C[i]+this.C[j])*.5;
+      if(coreAlpha>.001){const dx=P[j*2]-P[i*2],dy=P[j*2+1]-P[i*2+1],len=Math.hypot(dx,dy)||1,hw=.6*this.dpr,ox=-dy/len*hw,oy=dx/len*hw;
+        const core=(k,sg,u)=>raw(P[k*2]+ox*sg,P[k*2+1]+oy*sg,sg,coreAlpha,.95,u);
+        core(i,-1,ui);core(i,1,ui);core(j,1,uj);core(i,-1,ui);core(j,1,uj);core(j,-1,uj);
+      }
+      const next=l=>l;
+      for(let lane=0;lane<M;lane++){
+        put(i,lane);put(i,lane+1);put(j,next(lane+1));put(i,lane);put(j,next(lane+1));put(j,next(lane));
+      }
     }
-    frame = requestAnimationFrame(tick);
+    const ring=this.ring;
+    const ringPut=(u,sg)=>{const rr=ring.r+sg*ring.w/2;raw(ring.x+Math.cos(u)*rr,ring.y+Math.sin(u)*rr,sg,.90*this.ringMix,Math.min(.95,2*this.dpr/ring.w),u,.97);};
+    if(this.ringMix>0)for(let i=0;i<RN;i++){const u=i/RN*Math.PI*2,v=(i+1)/RN*Math.PI*2;ringPut(u,-1);ringPut(u,1);ringPut(v,1);ringPut(u,-1);ringPut(v,1);ringPut(v,-1);}
+    gl.viewport(0,0,this.cv.width,this.cv.height);gl.clearColor(BG[0],BG[1],BG[2],1);gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.useProgram(this.pr);gl.bindBuffer(gl.ARRAY_BUFFER,this.vb);gl.bufferData(gl.ARRAY_BUFFER,buf.subarray(0,o),gl.DYNAMIC_DRAW);
+    gl.enableVertexAttribArray(this.aP);gl.vertexAttribPointer(this.aP,2,gl.FLOAT,false,28,0);
+    gl.enableVertexAttribArray(this.aQ);gl.vertexAttribPointer(this.aQ,4,gl.FLOAT,false,28,8);
+    gl.enableVertexAttribArray(this.aLight);gl.vertexAttribPointer(this.aLight,1,gl.FLOAT,false,28,24);
+    gl.uniform2f(this.uRes,this.cv.width,this.cv.height);gl.uniform3f(this.uInk,INK[0],INK[1],INK[2]);
+    gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);gl.drawArrays(gl.TRIANGLES,0,o/7);
+  }
+  _draw2D(){
+    const c=this.ctx,G=this.G,P=this.P;c.setTransform(1,0,0,1,0,0);c.fillStyle='#DC5C35';c.fillRect(0,0,this.cv.width,this.cv.height);
+    for(let n=0;n<N;n++){
+      const i=this.order[n],j=(i+1)%N,coreAlpha=(this.C[i]+this.C[j])*.5;
+      if(coreAlpha>.001){c.strokeStyle=`rgba(255,222,196,${coreAlpha})`;c.lineWidth=.8*this.dpr;c.lineCap='round';c.beginPath();c.moveTo(P[i*2],P[i*2+1]);c.lineTo(P[j*2],P[j*2+1]);c.stroke();}
+      const at=(k,l)=>(k*(M+1)+l)*7,next=l=>l;
+      // Fill the entire curved cross-section as one outline to avoid Canvas2D
+      // antialias cracks between its eight adjacent faces.
+      const base=at(i,M/2),a0=at(i,0),a1=at(i,M);
+      const grad=c.createLinearGradient(G[a0],G[a0+1],G[a1],G[a1+1]);
+      const face=G[base+6]*G[base+6]*(3-2*G[base+6]);
+      for(const t of [0,.5,1]){const k=Math.min(1,.36+.58*face+.06*t);
+        grad.addColorStop(t,`rgba(255,${(187.425+(222.105-187.425)*k).toFixed(2)},${(144.075+(196.095-144.075)*k).toFixed(2)},${G[base+3]*(.88+.12*t)})`);}
+      c.fillStyle=grad;c.beginPath();
+      for(let l=0;l<=M;l++){const a=at(i,l);l?c.lineTo(G[a],G[a+1]):c.moveTo(G[a],G[a+1]);}
+      for(let l=M;l>=0;l--){const a=at(j,next(l));c.lineTo(G[a],G[a+1]);}c.closePath();c.fill();
+    }
+    if(this.ringMix>0){const r=this.ring;c.globalAlpha=this.ringMix*.86;c.strokeStyle='#FFDEC4';c.lineWidth=r.w;c.beginPath();c.arc(r.x,r.y,r.r,0,Math.PI*2);c.stroke();c.globalAlpha=1;}
   }
 
-  function schedule() {
-    if (destroyed) return;
-    if (reducedMotion.matches || document.hidden) {
-      if (frame) cancelAnimationFrame(frame);
-      frame = 0;
-      draw();
-    } else if (!frame) {
-      frame = requestAnimationFrame(tick);
-    }
+  destroy(){
+    this.events.abort();this.listeners={};
+    if(this.gl){this.gl.deleteBuffer(this.vb);this.gl.deleteProgram(this.pr);}
+    this.mode='none';
   }
+  /* 確定性取樣（截圖/對照用）：從 t=0 起以固定步長模擬 timeline=[[秒,狀態],...] */
+  simulate(seconds,timeline=[[0,'idle']],fps=60){
+    this.theta=FIT.t0;this.time=0;this.lvS=0;this.level=0;for(const k in this.sp){this.sp[k].v=TARGET[timeline[0][1]][k];this.sp[k].d=0}
+    this.state=timeline[0][1];const n=Math.round(seconds*fps);let ti=0;
+    for(let f=0;f<n;f++){const t=f/fps;while(ti+1<timeline.length&&t>=timeline[ti+1][0]){ti++;this.state=timeline[ti][1]}
+      const T=TARGET[this.state];for(let s=0;s<4;s++){const d=1/fps/4;
+        this.sp.m.step(T.m,d);this.sp.spd.step(T.spd,d);this.sp.hm.step(T.hm,d);this.sp.rip.step(0,d);this.sp.pinch.step(T.pinch,d)}
+      this.theta+=FIT.w*this.sp.spd.v/fps;this.time+=1/fps;}
+    this._geom();this._draw();
+  }
+}
+OS1Ribbon.FIT=FIT;OS1Ribbon.STATES=STATES;OS1Ribbon.TARGET=TARGET;
+global.OS1Ribbon=OS1Ribbon;
+})(typeof window!=='undefined'?window:globalThis);
 
-  function resize() {
-    const bounds = canvas.getBoundingClientRect();
-    width = Math.max(1, bounds.width);
-    height = Math.max(1, bounds.height);
-    ratio = Math.min(devicePixelRatio || 1, 2);
-    canvas.width = Math.round(width * ratio);
-    canvas.height = Math.round(height * ratio);
+// VoiceClient remains the only source of state and real audio levels.
+function createSoundField(canvas, waveform, orbButton) {
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  const events = new AbortController();
+  const on = (target, name, fn) => target.addEventListener(name, fn, {signal:events.signal});
+  const bars = Array.from({length:33}, () => {const bar=document.createElement('span');waveform.append(bar);return bar;});
+  const ribbon = new globalThis.OS1Ribbon(canvas, {reducedMotion:reducedMotion.matches});
+  let state='idle', active=false, input=0, output=0, frame=0, last=0, destroyed=false;
+  const bound = v => Number.isFinite(v) ? Math.max(0,Math.min(1,v)) : 0;
+  function meter() {
+    const level=active && state!=='paused' ? (state==='speaking'?output:state==='listening'?input:0) : 0;
+    ribbon.setLevel(level);
+    canvas.dataset.visualState=state;
+    canvas.dataset.audioSource=state==='speaking'?'output':state==='listening'?'input':'none';
+    canvas.dataset.renderer=ribbon.mode;
+    canvas.dataset.level=String(level);
+    bars.forEach((bar,i)=>{const f=Math.pow(1-Math.abs(i-16)/17,1.4);bar.style.height=`${2+22*f*level}px`;bar.style.opacity=String(.25+.65*level);});
+  }
+  function draw(dt=0) {meter();ribbon.tick(dt);}
+  function cancel(){if(frame)cancelAnimationFrame(frame);frame=0;last=0;}
+  function tick(now){
+    frame=0;if(destroyed || document.hidden || reducedMotion.matches || state==='paused' || ribbon.mode==='lost')return;
+    draw(last?Math.min(.067,(now-last)/1000):0);last=now;frame=requestAnimationFrame(tick);
+  }
+  function schedule(){
+    cancel();if(destroyed || document.hidden)return;
+    draw();if(!reducedMotion.matches && state!=='paused' && ribbon.mode!=='lost')frame=requestAnimationFrame(tick);
+  }
+  function settleStill(){
+    // No continuous phase travel under reduced motion; finish only the requested shape.
+    const phase=ribbon.theta, render=ribbon._draw;ribbon._draw=()=>{};
+    try{for(let i=0;i<60;i++){ribbon.tick(1/15);ribbon.theta=phase;}}
+    finally{ribbon._draw=render;}
     draw();
-    schedule();
   }
-
-  const observer = new ResizeObserver(resize);
-  observer.observe(canvas);
-  const motionChange = () => schedule();
-  const visibilityChange = () => schedule();
-  reducedMotion.addEventListener("change", motionChange);
-  document.addEventListener("visibilitychange", visibilityChange);
+  function resize(){
+    if(destroyed)return;
+    const b=canvas.getBoundingClientRect();
+    ribbon.opts.scale=Math.min(b.width*.84/520,b.height*.88/300);
+    ribbon.resize();schedule();
+  }
+  on(document,'visibilitychange',schedule);
+  on(reducedMotion,'change',()=>{ribbon.reduced=reducedMotion.matches;if(reducedMotion.matches)settleStill();schedule();});
+  ribbon.on('error',event=>{if(event.type==='context-lost'){canvas.dataset.renderer='lost';cancel();}});
+  ribbon.on('recovered',()=>{resize();});
+  const observer=new ResizeObserver(resize);observer.observe(canvas);
   resize();
-
   return {
-    setState(next, isActive) {
-      state = next;
-      active = isActive;
-      if (!active) { input = 0; output = 0; }
-      if (reducedMotion.matches) draw();
+    setState(next,isActive){
+      const previous=state;state=next;active=!!isActive;
+      if(!active || state==='paused'){input=0;output=0;}
+      const visual=state==='paused'?'idle':globalThis.OS1Ribbon.STATES.includes(state)?state:'idle';
+      ribbon.setState(visual);meter();
+      if(reducedMotion.matches && previous!==state)settleStill();
+      if(previous!==state)schedule();
     },
-    setLevels(nextInput, nextOutput) {
-      input = nextInput;
-      output = nextOutput;
-      if (reducedMotion.matches) draw();
-    },
-    destroy() {
-      destroyed = true;
-      if (frame) cancelAnimationFrame(frame);
-      observer.disconnect();
-      reducedMotion.removeEventListener("change", motionChange);
-      document.removeEventListener("visibilitychange", visibilityChange);
-    },
+    setLevels(nextInput,nextOutput){input=bound(nextInput);output=bound(nextOutput);meter();if(reducedMotion.matches)draw();},
+    pulse(){ /* Button actions change real client state; do not manufacture audio activity. */ },
+    destroy(){destroyed=true;cancel();observer.disconnect();events.abort();ribbon.destroy();}
   };
 }
