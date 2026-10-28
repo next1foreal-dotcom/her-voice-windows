@@ -6,7 +6,7 @@
 
 2026-10-28 录制的当前 Open OS1 界面：丝带动画、文字回复、打断、通话记录及暂停恢复。此片为无声的协议演示，不采集麦克风、不运行真实 ASR/TTS，也不调用付费 API。
 
-https://github.com/user-attachments/assets/dfd73ea8-1896-4ce5-8bfa-820d55af78ae
+https://github.com/user-attachments/assets/8a342b4d-0997-4fdb-91bc-dee5b8c658f4
 
 [下载 MP4](docs/assets/os1-demo.mp4)
 
