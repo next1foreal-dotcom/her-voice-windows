@@ -2,6 +2,14 @@
 
 一个面向 Windows 的开源语音助手原型：本机语音识别与合成、流式对话、可打断播放，以及随声音变化的 WebGL 丝带界面。
 
+## 界面演示
+
+2026-10-28 录制的当前 Open OS1 界面：丝带动画、文字回复、打断、通话记录及暂停恢复。此片为无声的协议演示，不采集麦克风、不运行真实 ASR/TTS，也不调用付费 API。
+
+https://github.com/user-attachments/assets/dfd73ea8-1896-4ce5-8bfa-820d55af78ae
+
+[下载 MP4](docs/assets/os1-demo.mp4)
+
 [MIT License](LICENSE) · [安装指南](docs/GETTING_STARTED.md) · [架构](docs/ARCHITECTURE.md) · [贡献](CONTRIBUTING.md) · [安全](SECURITY.md)
 
 Python 包名为 `her-windows-voice`，代码模块为 `her_voice`。这是可自行运行和继续开发的原型，真实语音模式需要准备本地模型、NVIDIA GPU 和文字模型接口。
