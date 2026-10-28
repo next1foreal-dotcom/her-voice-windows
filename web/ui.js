@@ -597,11 +597,13 @@ class OS1Ribbon{
     this._emit('renderer',this.mode);
   }
   _initGL(){
-    const gl=this.gl;
+    const gl=this.gl;this.maxBlend=gl.getExtension('EXT_blend_minmax');
     const vs=`attribute vec2 p;attribute vec4 q;attribute float light;uniform vec2 res;varying vec4 v;varying float lit;
       void main(){v=q;lit=light;gl_Position=vec4(p/res*2.-1.,0.,1.);gl_Position.y=-gl_Position.y;}`;
-    const fs=`precision mediump float;varying vec4 v;varying float lit;uniform vec3 ink;
+    const fs=`precision mediump float;varying vec4 v;varying float lit;uniform vec3 ink;uniform vec3 ground;uniform vec2 tips;uniform float tipPass;
       void main(){
+        bool tip=gl_FragCoord.x<tips.x||gl_FragCoord.x>tips.y;
+        if((tipPass>.5)!=tip)discard;
         float edge=1.-smoothstep(1.-v.z,1.,abs(v.x));
         // Matte broad shading, not parallel bright rails or a glossy tube.
         float grain=1.-.008*fract(52.9829189*fract(dot(floor(gl_FragCoord.xy),vec2(.06711056,.00583715))));
@@ -611,7 +613,7 @@ class OS1Ribbon{
         vec3 warm=vec3(1.,.735,.565);
         vec3 pigment=mix(warm,ink,clamp(.36+.58*face+.06*crossBand,0.,1.));
         float a=v.y*edge*grain*(.88+.12*crossBand);
-        gl_FragColor=vec4(pigment*a,a);
+        gl_FragColor=tipPass>.5?vec4(mix(ground,pigment,a),1.):vec4(pigment*a,a);
       }`;
     const sh=(t,s)=>{const o=gl.createShader(t);gl.shaderSource(o,s);gl.compileShader(o);
       if(!gl.getShaderParameter(o,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(o));return o};
@@ -619,7 +621,8 @@ class OS1Ribbon{
       const pr=gl.createProgram();gl.attachShader(pr,sh(gl.VERTEX_SHADER,vs));gl.attachShader(pr,sh(gl.FRAGMENT_SHADER,fs));
       gl.linkProgram(pr);if(!gl.getProgramParameter(pr,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(pr));
       this.pr=pr;this.vb=gl.createBuffer();this.aP=gl.getAttribLocation(pr,'p');this.aQ=gl.getAttribLocation(pr,'q');
-      this.aLight=gl.getAttribLocation(pr,'light');this.uRes=gl.getUniformLocation(pr,'res');this.uInk=gl.getUniformLocation(pr,'ink');return true;
+      this.aLight=gl.getAttribLocation(pr,'light');this.uRes=gl.getUniformLocation(pr,'res');this.uInk=gl.getUniformLocation(pr,'ink');this.uGround=gl.getUniformLocation(pr,'ground');
+      this.uTips=gl.getUniformLocation(pr,'tips');this.uTipPass=gl.getUniformLocation(pr,'tipPass');return true;
     }catch(err){this._emit('error',{type:'webgl-init',message:String(err)});return false}
   }
   resize(){
@@ -723,6 +726,16 @@ class OS1Ribbon{
     this.order.sort((a,b)=>this.zs[b]-this.zs[a]);
   }
 
+  _turnBounds(){
+    let left=Infinity,right=-Infinity,pad=0;
+    for(let i=0;i<N;i++){
+      left=Math.min(left,this.P[i*2]);right=Math.max(right,this.P[i*2]);
+      pad=Math.max(pad,Math.abs(this.O[i*2]));
+    }
+    // Only the tight end turns can cover the same surface more than once.
+    // Keep the central, intentionally translucent crossings unchanged.
+    return [left+pad*2,right-pad*2];
+  }
   _draw(){
     if(this.mode==='webgl')return this._drawGL();
     if(this.mode==='canvas2d')return this._draw2D();
@@ -753,26 +766,46 @@ class OS1Ribbon{
     gl.enableVertexAttribArray(this.aQ);gl.vertexAttribPointer(this.aQ,4,gl.FLOAT,false,28,8);
     gl.enableVertexAttribArray(this.aLight);gl.vertexAttribPointer(this.aLight,1,gl.FLOAT,false,28,24);
     gl.uniform2f(this.uRes,this.cv.width,this.cv.height);gl.uniform3f(this.uInk,INK[0],INK[1],INK[2]);
-    gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);gl.drawArrays(gl.TRIANGLES,0,o/7);
+    const [left,right]=this.maxBlend?this._turnBounds():[-1,this.cv.width+1];
+    gl.uniform2f(this.uTips,left,right);gl.uniform3f(this.uGround,BG[0],BG[1],BG[2]);
+    gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
+    gl.uniform1f(this.uTipPass,0);gl.blendEquation(gl.FUNC_ADD);gl.drawArrays(gl.TRIANGLES,0,o/7);
+    if(this.maxBlend){
+      // Resolve overlapping faces of each turn once, instead of accumulating
+      // opacity into a bright diamond. Positions, pigment and opacity stay intact.
+      gl.uniform1f(this.uTipPass,1);gl.blendEquation(this.maxBlend.MAX_EXT);gl.drawArrays(gl.TRIANGLES,0,o/7);
+      gl.blendEquation(gl.FUNC_ADD);
+    }
   }
   _draw2D(){
     const c=this.ctx,G=this.G,P=this.P;c.setTransform(1,0,0,1,0,0);c.fillStyle='#DC5C35';c.fillRect(0,0,this.cv.width,this.cv.height);
-    for(let n=0;n<N;n++){
-      const i=this.order[n],j=(i+1)%N,coreAlpha=(this.C[i]+this.C[j])*.5;
-      if(coreAlpha>.001){c.strokeStyle=`rgba(255,222,196,${coreAlpha})`;c.lineWidth=.8*this.dpr;c.lineCap='round';c.beginPath();c.moveTo(P[i*2],P[i*2+1]);c.lineTo(P[j*2],P[j*2+1]);c.stroke();}
-      const at=(k,l)=>(k*(M+1)+l)*7,next=l=>l;
-      // Fill the entire curved cross-section as one outline to avoid Canvas2D
-      // antialias cracks between its eight adjacent faces.
-      const base=at(i,M/2),a0=at(i,0),a1=at(i,M);
-      const grad=c.createLinearGradient(G[a0],G[a0+1],G[a1],G[a1+1]);
-      const face=G[base+6]*G[base+6]*(3-2*G[base+6]);
-      for(const t of [0,.5,1]){const k=Math.min(1,.36+.58*face+.06*t);
-        grad.addColorStop(t,`rgba(255,${(187.425+(222.105-187.425)*k).toFixed(2)},${(144.075+(196.095-144.075)*k).toFixed(2)},${G[base+3]*(.88+.12*t)})`);}
-      c.fillStyle=grad;c.beginPath();
-      for(let l=0;l<=M;l++){const a=at(i,l);l?c.lineTo(G[a],G[a+1]):c.moveTo(G[a],G[a+1]);}
-      for(let l=M;l>=0;l--){const a=at(j,next(l));c.lineTo(G[a],G[a+1]);}c.closePath();c.fill();
+    const [left,right]=this._turnBounds();
+    for(let pass=0;pass<2;pass++){
+      c.save();c.beginPath();
+      if(pass){c.rect(0,0,left,this.cv.height);c.rect(right,0,this.cv.width-right,this.cv.height)}
+      else c.rect(left,0,right-left,this.cv.height);
+      c.clip();c.globalCompositeOperation=pass?'lighten':'source-over';
+      for(let n=0;n<N;n++){
+        const i=this.order[n],j=(i+1)%N,coreAlpha=(this.C[i]+this.C[j])*.5;
+        if(coreAlpha>.001){c.strokeStyle=`rgba(255,222,196,${coreAlpha})`;c.lineWidth=.8*this.dpr;c.lineCap='round';c.beginPath();c.moveTo(P[i*2],P[i*2+1]);c.lineTo(P[j*2],P[j*2+1]);c.stroke();}
+        const at=(k,l)=>(k*(M+1)+l)*7,next=l=>l;
+        // Fill the entire curved cross-section as one outline to avoid Canvas2D
+        // antialias cracks between its eight adjacent faces.
+        const base=at(i,M/2),a0=at(i,0),a1=at(i,M);
+        const grad=c.createLinearGradient(G[a0],G[a0+1],G[a1],G[a1+1]);
+        const face=G[base+6]*G[base+6]*(3-2*G[base+6]);
+        for(const t of [0,.5,1]){
+          const k=Math.min(1,.36+.58*face+.06*t),a=G[base+3]*(.88+.12*t);
+          const rgb=[255,187.425+(222.105-187.425)*k,144.075+(196.095-144.075)*k];
+          grad.addColorStop(t,pass?`rgb(${rgb.map((v,i)=>BG[i]*255+(v-BG[i]*255)*a).join(',')})`:`rgba(255,${rgb[1].toFixed(2)},${rgb[2].toFixed(2)},${a})`);
+        }
+        c.fillStyle=grad;c.beginPath();
+        for(let l=0;l<=M;l++){const a=at(i,l);l?c.lineTo(G[a],G[a+1]):c.moveTo(G[a],G[a+1]);}
+        for(let l=M;l>=0;l--){const a=at(j,next(l));c.lineTo(G[a],G[a+1]);}c.closePath();c.fill();
+      }
+      if(this.ringMix>0){const r=this.ring;c.globalAlpha=this.ringMix*.86;c.strokeStyle='#FFDEC4';c.lineWidth=r.w;c.beginPath();c.arc(r.x,r.y,r.r,0,Math.PI*2);c.stroke();c.globalAlpha=1;}
+      c.restore();
     }
-    if(this.ringMix>0){const r=this.ring;c.globalAlpha=this.ringMix*.86;c.strokeStyle='#FFDEC4';c.lineWidth=r.w;c.beginPath();c.arc(r.x,r.y,r.r,0,Math.PI*2);c.stroke();c.globalAlpha=1;}
   }
 
   destroy(){
