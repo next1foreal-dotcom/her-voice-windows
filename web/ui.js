@@ -577,7 +577,7 @@ class OS1Ribbon{
     this.cv=canvas;this.events=new AbortController();this.opts=opts;this.state='idle';this.level=0;this.lvS=0;
     this.sp={m:new Spring(0,4.6),spd:new Spring(1,4),hm:new Spring(1,6),rip:new Spring(0,6),pinch:new Spring(0,9),lvl:new Spring(0,8)};
     this.theta=FIT.t0;this.time=0;this.listeners={};this.reduced=!!opts.reducedMotion;
-    this.buf=new Float32Array(((M+1)*N+RN)*6*7);this.order=new Uint16Array(N);this.zs=new Float32Array(N);
+    this.buf=new Float32Array(((M+1)*N+RN)*6*7);this.indices=new Uint16Array(((M+1)*N+RN)*6);this.order=new Uint16Array(N);this.zs=new Float32Array(N);
     this.G=new Float32Array(N*(M+1)*7);this.C=new Float32Array(N);this.F=new Float32Array(N);this.P=new Float32Array(N*2);this.O=new Float32Array(N*2);this.A=new Float32Array(N);this.Z=new Float32Array(N);
     this.mode='none';this._init(opts.renderer);
     this.resize();
@@ -620,7 +620,7 @@ class OS1Ribbon{
     try{
       const pr=gl.createProgram();gl.attachShader(pr,sh(gl.VERTEX_SHADER,vs));gl.attachShader(pr,sh(gl.FRAGMENT_SHADER,fs));
       gl.linkProgram(pr);if(!gl.getProgramParameter(pr,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(pr));
-      this.pr=pr;this.vb=gl.createBuffer();this.aP=gl.getAttribLocation(pr,'p');this.aQ=gl.getAttribLocation(pr,'q');
+      this.pr=pr;this.vb=gl.createBuffer();this.ib=gl.createBuffer();this.aP=gl.getAttribLocation(pr,'p');this.aQ=gl.getAttribLocation(pr,'q');
       this.aLight=gl.getAttribLocation(pr,'light');this.uRes=gl.getUniformLocation(pr,'res');this.uInk=gl.getUniformLocation(pr,'ink');this.uGround=gl.getUniformLocation(pr,'ground');
       this.uTips=gl.getUniformLocation(pr,'tips');this.uTipPass=gl.getUniformLocation(pr,'tipPass');return true;
     }catch(err){this._emit('error',{type:'webgl-init',message:String(err)});return false}
@@ -742,9 +742,14 @@ class OS1Ribbon{
   }
   _drawGL(){
     const gl=this.gl;if(gl.isContextLost())return;
-    const G=this.G,P=this.P,buf=this.buf;let o=0;
-    const raw=(x,y,v,a,f,u,light=1)=>{buf[o++]=x;buf[o++]=y;buf[o++]=v;buf[o++]=a;buf[o++]=f;buf[o++]=u;buf[o++]=light};
-    const put=(i,lane,wrap=false)=>{const a=(i*(M+1)+lane)*7;for(let k=0;k<7;k++)buf[o++]=G[a+k];if(wrap){buf[o-5]*=-1;buf[o-2]=Math.PI*2;}};
+    const G=this.G,P=this.P,buf=this.buf,indices=this.indices;
+    // Adjacent triangles share their exact vertices; preserve painter order in
+    // the index stream instead of expanding the surface into duplicate floats.
+    buf.set(G);let o=0,vertices=G.length/7;
+    const raw=(x,y,v,a,f,u,light=1)=>{
+      let at=vertices*7;buf[at++]=x;buf[at++]=y;buf[at++]=v;buf[at++]=a;buf[at++]=f;buf[at++]=u;buf[at]=light;
+      indices[o++]=vertices++;
+    };
     for(let n=0;n<N;n++){
       const i=this.order[n],j=(i+1)%N,ui=i/N*Math.PI*2,uj=ui+Math.PI*2/N;
       const coreAlpha=(this.C[i]+this.C[j])*.5;
@@ -752,16 +757,18 @@ class OS1Ribbon{
         const core=(k,sg,u)=>raw(P[k*2]+ox*sg,P[k*2+1]+oy*sg,sg,coreAlpha,.95,u);
         core(i,-1,ui);core(i,1,ui);core(j,1,uj);core(i,-1,ui);core(j,1,uj);core(j,-1,uj);
       }
-      const next=l=>l;
       for(let lane=0;lane<M;lane++){
-        put(i,lane);put(i,lane+1);put(j,next(lane+1));put(i,lane);put(j,next(lane+1));put(j,next(lane));
+        const a=i*(M+1)+lane,b=a+1,d=j*(M+1)+lane,c=d+1;
+        indices[o++]=a;indices[o++]=b;indices[o++]=c;
+        indices[o++]=a;indices[o++]=c;indices[o++]=d;
       }
     }
     const ring=this.ring;
     const ringPut=(u,sg)=>{const rr=ring.r+sg*ring.w/2;raw(ring.x+Math.cos(u)*rr,ring.y+Math.sin(u)*rr,sg,.90*this.ringMix,Math.min(.95,2*this.dpr/ring.w),u,.97);};
     if(this.ringMix>0)for(let i=0;i<RN;i++){const u=i/RN*Math.PI*2,v=(i+1)/RN*Math.PI*2;ringPut(u,-1);ringPut(u,1);ringPut(v,1);ringPut(u,-1);ringPut(v,1);ringPut(v,-1);}
     gl.viewport(0,0,this.cv.width,this.cv.height);gl.clearColor(BG[0],BG[1],BG[2],1);gl.clear(gl.COLOR_BUFFER_BIT);
-    gl.useProgram(this.pr);gl.bindBuffer(gl.ARRAY_BUFFER,this.vb);gl.bufferData(gl.ARRAY_BUFFER,buf.subarray(0,o),gl.DYNAMIC_DRAW);
+    gl.useProgram(this.pr);gl.bindBuffer(gl.ARRAY_BUFFER,this.vb);gl.bufferData(gl.ARRAY_BUFFER,buf.subarray(0,vertices*7),gl.DYNAMIC_DRAW);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.ib);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,indices.subarray(0,o),gl.DYNAMIC_DRAW);
     gl.enableVertexAttribArray(this.aP);gl.vertexAttribPointer(this.aP,2,gl.FLOAT,false,28,0);
     gl.enableVertexAttribArray(this.aQ);gl.vertexAttribPointer(this.aQ,4,gl.FLOAT,false,28,8);
     gl.enableVertexAttribArray(this.aLight);gl.vertexAttribPointer(this.aLight,1,gl.FLOAT,false,28,24);
@@ -769,11 +776,11 @@ class OS1Ribbon{
     const [left,right]=this.maxBlend?this._turnBounds():[-1,this.cv.width+1];
     gl.uniform2f(this.uTips,left,right);gl.uniform3f(this.uGround,BG[0],BG[1],BG[2]);
     gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
-    gl.uniform1f(this.uTipPass,0);gl.blendEquation(gl.FUNC_ADD);gl.drawArrays(gl.TRIANGLES,0,o/7);
+    gl.uniform1f(this.uTipPass,0);gl.blendEquation(gl.FUNC_ADD);gl.drawElements(gl.TRIANGLES,o,gl.UNSIGNED_SHORT,0);
     if(this.maxBlend){
       // Resolve overlapping faces of each turn once, instead of accumulating
       // opacity into a bright diamond. Positions, pigment and opacity stay intact.
-      gl.uniform1f(this.uTipPass,1);gl.blendEquation(this.maxBlend.MAX_EXT);gl.drawArrays(gl.TRIANGLES,0,o/7);
+      gl.uniform1f(this.uTipPass,1);gl.blendEquation(this.maxBlend.MAX_EXT);gl.drawElements(gl.TRIANGLES,o,gl.UNSIGNED_SHORT,0);
       gl.blendEquation(gl.FUNC_ADD);
     }
   }
@@ -810,7 +817,7 @@ class OS1Ribbon{
 
   destroy(){
     this.events.abort();this.listeners={};
-    if(this.gl){this.gl.deleteBuffer(this.vb);this.gl.deleteProgram(this.pr);}
+    if(this.gl){this.gl.deleteBuffer(this.vb);this.gl.deleteBuffer(this.ib);this.gl.deleteProgram(this.pr);}
     this.mode='none';
   }
   /* 确定性取样（截图/对照用）：从 t=0 起以固定步长模拟 timeline=[[秒,状态],...] */
