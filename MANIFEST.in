@@ -1,3 +1,7 @@
-include README.md LICENSE
+include README.md LICENSE CONTRIBUTING.md SECURITY.md
+recursive-include docs *.md *.json *.svg
+recursive-include patches *.md *.patch LICENSE.upstream
+recursive-include scripts *.py *.ps1 *.mjs
+recursive-include examples *.py *.env.example
 recursive-include web *.html *.css *.js
 recursive-include config *.yaml *.json *.txt

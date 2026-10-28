@@ -1,13 +1,21 @@
 [build-system]
-requires = ["setuptools>=75"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "her-windows-voice"
 version = "0.4.0"
-description = "Reusable local voice runtime and browser client with configurable Agent endpoints"
+description = "Open OS1: local Windows speech runtime and browser client with configurable Agent endpoints"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE", "patches/audio.cpp/LICENSE.upstream"]
 requires-python = ">=3.11,<3.15"
 dependencies = ["aiohttp==3.14.5"]
+
+[project.urls]
+Homepage = "https://github.com/next1foreal-dotcom/her-voice-windows"
+Repository = "https://github.com/next1foreal-dotcom/her-voice-windows"
+Issues = "https://github.com/next1foreal-dotcom/her-voice-windows/issues"
 
 [project.scripts]
 her-voice = "her_voice.__main__:main"

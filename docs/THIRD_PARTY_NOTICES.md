@@ -20,4 +20,8 @@
 
 用户导入的 WAV 和对应文字单独保存在本地工作目录，由用户提供；不包含在项目示例包。两个 TTS 后端复用这些输入，不共享 embedding。
 
-界面使用系统字体和程序绘制的 Canvas 动画，不加载外部字体 CDN 或图片。开发验收使用的浏览器和字体不属于正式 Windows 推理依赖。实际安装的完整 Python 依赖记录由 `.runtime/pip-freeze-windows.txt` 保存；此表是主要集成来源索引，不是所有传递依赖的清单。
+当前 Open OS1 界面使用系统字体和程序绘制的 WebGL 动画（含 Canvas2D 回退），不加载外部字体 CDN 或图片。开发验收使用的浏览器和字体不属于正式 Windows 推理依赖。实际安装的完整 Python 依赖记录由 `.runtime/pip-freeze-windows.txt` 保存；此表是主要集成来源索引，不是所有传递依赖的清单。
+
+## audio.cpp 派生补丁
+
+仓库的 patches/audio.cpp/*.patch 包含基于固定上游修改的派生代码，保留 Apache-2.0 许可，完整文本见 [LICENSE.upstream](../patches/audio.cpp/LICENSE.upstream)。各补丁的基点、修改目的、应用顺序与验证边界见 [补丁说明](../patches/audio.cpp/README.md)；根目录 MIT 不替代这些文件的上游许可。
